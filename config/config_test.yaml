@@ -5,13 +5,14 @@ SESSION_CONFIG : {
   PER_PROCESS_GPU_MEMORY_FRACTION : 0.9
 }
 
+PRECISION_AT_K_METRIC : [3, 5]
+
 #################################################
 # Dataset Info
 
 NUM_CLASSES : 200
 
-NUM_TRAIN_EXAMPLES : 5994
-NUM_TRAIN_ITERATIONS : 20000
+NUM_TEST_EXAMPLES : 5794
 
 BATCH_SIZE : 32
 
@@ -42,7 +43,7 @@ IMAGE_PROCESSING : {
     },
     WHOLE_IMAGE_CFG: {
         # Fraction of time to take a random crop from the image, 0 is never, 1 is always
-        DO_RANDOM_CROP : 0.75,
+        DO_RANDOM_CROP : 0,
         RANDOM_CROP_CFG: {
             MIN_AREA : 0.4, # between 0 and 1
             MAX_AREA : 1.0, # between 0 and 1
@@ -55,16 +56,16 @@ IMAGE_PROCESSING : {
     # 2) We need to resize the extracted regions to feed into the network. 
     MAINTAIN_ASPECT_RATIO : false,
     # Avoid slower resize operations (bi-cubic, etc.)
-    RESIZE_FAST : false,
+    RESIZE_FAST : True,
 
     # 3) We can flip the regions
     # Randomly flip the image left right, 50% chance of flipping
-    DO_RANDOM_FLIP_LEFT_RIGHT : true,
+    DO_RANDOM_FLIP_LEFT_RIGHT : false,
 
     # 4) We can distort the colors of the regions
     # Color distortion
     # The fraction of time to distort the color, 0 is never, 1 is always
-    DO_COLOR_DISTORTION : 0.3, 
+    DO_COLOR_DISTORTION : 0, 
     # Avoids slower ops (random_hue and random_contrast)
     COLOR_DISTORT_FAST : false
 }
@@ -74,30 +75,15 @@ IMAGE_PROCESSING : {
 # Queues
 #
 # Number of threads to populate the batch queue
-NUM_INPUT_THREADS : 4
+NUM_INPUT_THREADS : 2
 # Should the data be shuffled? 
-SHUFFLE_QUEUE : true
+SHUFFLE_QUEUE : false
 # Capacity of the queue producing batched examples
 QUEUE_CAPACITY : 1000
 # Minimum size of the queue to ensure good shuffling
 QUEUE_MIN :  200
 
 # END: Queues
-#################################################
-# Learning Rate Parameters
-LEARNING_RATE_DECAY_TYPE : 'exponential' # One of "fixed", "exponential", or "polynomial"
-
-INITIAL_LEARNING_RATE : 0.01
-END_LEARNING_RATE : 0.0001 # The minimal end learning rate used by a polynomial decay learning rate.
-
-LABEL_SMOOTHING : 0.0 # The amount of label smoothing.
-
-LEARNING_RATE_DECAY_FACTOR : 0.94
-NUM_EPOCHS_PER_DELAY : 4
-
-LEARNING_RATE_STAIRCASE : true
-
-# END: Learning Rate Parameters
 #################################################
 # Regularization 
 #
@@ -113,59 +99,4 @@ BATCHNORM_EPSILON : 0.001
 DROPOUT_KEEP_PROB : 0.8
 
 # End: Regularization
-#################################################
-# Optimization
-#
-# The name of the optimizer, one of "adadelta", "adagrad", "adam", "ftrl", "momentum", "sgd" or "rmsprop"
-OPTIMIZER : 'rmsprop' 
-OPTIMIZER_EPSILON : 1.0
-
-# The decay rate for adadelta.
-ADADELTA_RHO: 0.95
-
-# Starting value for the AdaGrad accumulators.
-ADAGRAD_INITIAL_ACCUMULATOR_VALUE: 0.1
-
-# The exponential decay rate for the 1st moment estimates.
-ADAM_BETA1 : 0.9
-# The exponential decay rate for the 2nd moment estimates.
-ADAM_BETA2 : 0.99
-
-# The learning rate power.
-FTRL_LEARNING_RATE_POWER : -0.5
-# Starting value for the FTRL accumulators.
-FTRL_INITIAL_ACCUMULATOR_VALUE : 0.1
-# The FTRL l1 regularization strength.
-FTRL_L1 : 0.0
-# The FTRL l2 regularization strength.
-FTRL_L2 : 0.0
-
-# The momentum for the MomentumOptimizer and RMSPropOptimizer
-MOMENTUM : 0.0
-
-# Decay term for RMSProp.
-RMSPROP_DECAY : 0.9 
-
-# END: Optimization 
-#################################################
-# Saving Models and Summaries
-#
-# How often, in seconds, to save summaries.
-SAVE_SUMMARY_SECS : 30
-
-# How often, in seconds, to save the model
-SAVE_INTERVAL_SECS : 1800
-
-# The maximum number of recent checkpoint files to keep.
-MAX_TO_KEEP : 3
-
-# In addition to keeping the most recent `max_to_keep` checkpoint files, 
-# you might want to keep one checkpoint file for every N hours of training
-# The default value of 10,000 hours effectively disables the feature.
-KEEP_CHECKPOINT_EVERY_N_HOURS : 10000
-
-# The frequency, in terms of global steps, that the loss and global step and logged.
-LOG_EVERY_N_STEPS : 10
-
-# END: Saving Models and Summaries
 #################################################

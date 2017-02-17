@@ -29,8 +29,9 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 from config.parse_config import parse_config_file
-from preprocessing import inputs
 from nets import nets_factory
+from preprocessing import inputs
+
 
 def _configure_learning_rate(global_step, cfg):
     """Configures the learning rate.

@@ -191,17 +191,20 @@ def apply_distortions(image, cfg, add_summaries=True):
       tf.summary.image('original_images', tf.expand_dims(image, 0))
 
     # Extract a distorted bbox
-    r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
-    do_crop = tf.less(r, cfg.WHOLE_IMAGE_CFG.DO_RANDOM_CROP)
-    rc_cfg = cfg.WHOLE_IMAGE_CFG.RANDOM_CROP_CFG
-    bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
-    distorted_image, distorted_bbox = tf.cond(do_crop,
-            lambda: distorted_bounding_box_crop(image, bbox,
-                                                   aspect_ratio_range=(rc_cfg.MIN_ASPECT_RATIO, rc_cfg.MAX_ASPECT_RATIO),
-                                                   area_range=(rc_cfg.MIN_AREA, rc_cfg.MAX_AREA),
-                                                   max_attempts=rc_cfg.MAX_ATTEMPTS),
-            lambda: tf.tuple([image, bbox])
-        )
+    if cfg.WHOLE_IMAGE_CFG.DO_RANDOM_CROP > 0:
+        r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
+        do_crop = tf.less(r, cfg.WHOLE_IMAGE_CFG.DO_RANDOM_CROP)
+        rc_cfg = cfg.WHOLE_IMAGE_CFG.RANDOM_CROP_CFG
+        bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
+        distorted_image, distorted_bbox = tf.cond(do_crop,
+                lambda: distorted_bounding_box_crop(image, bbox,
+                                                       aspect_ratio_range=(rc_cfg.MIN_ASPECT_RATIO, rc_cfg.MAX_ASPECT_RATIO),
+                                                       area_range=(rc_cfg.MIN_AREA, rc_cfg.MAX_AREA),
+                                                       max_attempts=rc_cfg.MAX_ATTEMPTS),
+                lambda: tf.tuple([image, bbox])
+            )
+    else:
+        distorted_image = tf.identity(image)
 
     distorted_image.set_shape([None, None, 3])
 
@@ -242,14 +245,16 @@ def apply_distortions(image, cfg, add_summaries=True):
 
     # TODO: Can this be changed so that we don't always distort the colors?
     # Distort the colors
-    r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
-    do_color_distortion = tf.less(r, cfg.DO_COLOR_DISTORTION)
-    num_color_cases = 1 if cfg.COLOR_DISTORT_FAST else 4
-    distorted_color_image = apply_with_random_selector(
-      distorted_image,
-      lambda x, ordering: distort_color(x, ordering, fast_mode=cfg.COLOR_DISTORT_FAST),
-      num_cases=num_color_cases)
-    distorted_image = tf.cond(do_color_distortion, lambda: tf.identity(distorted_color_image), lambda: tf.identity(distorted_image))
+    if cfg.DO_COLOR_DISTORTION > 0:
+        r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
+        do_color_distortion = tf.less(r, cfg.DO_COLOR_DISTORTION)
+        num_color_cases = 1 if cfg.COLOR_DISTORT_FAST else 4
+        distorted_color_image = apply_with_random_selector(
+          distorted_image,
+          lambda x, ordering: distort_color(x, ordering, fast_mode=cfg.COLOR_DISTORT_FAST),
+          num_cases=num_color_cases)
+        distorted_image = tf.cond(do_color_distortion, lambda: tf.identity(distorted_color_image), lambda: tf.identity(distorted_image))
+
     distorted_image.set_shape([cfg.INPUT_SIZE, cfg.INPUT_SIZE, 3])
 
     # Add a summary
