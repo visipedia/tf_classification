@@ -12,7 +12,7 @@ from config.parse_config import parse_config_file
 from nets import nets_factory
 from preprocessing import inputs
 
-def test(tfrecords, checkpoint_path, savedir, max_iterations, cfg):
+def test(tfrecords, checkpoint_path, savedir, max_iterations, eval_interval_secs, cfg):
     """
     Args:
         tfrecords (list)
@@ -94,10 +94,6 @@ def test(tfrecords, checkpoint_path, savedir, max_iterations, cfg):
             # We could use ceil if the batch queue is allowed to pad the last batch
             num_batches = np.floor(cfg.NUM_TEST_EXAMPLES / float(cfg.BATCH_SIZE))
 
-        if tf.gfile.IsDirectory(checkpoint_path):
-            checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
-
-        tf.logging.info('Evaluating %s' % checkpoint_path)
 
         sess_config = tf.ConfigProto(
             log_device_placement=cfg.SESSION_CONFIG.LOG_DEVICE_PLACEMENT,
@@ -107,15 +103,42 @@ def test(tfrecords, checkpoint_path, savedir, max_iterations, cfg):
             )
         )
 
-        slim.evaluation.evaluate_once(
-            master='',
-            checkpoint_path=checkpoint_path,
-            logdir=savedir,
-            num_evals=num_batches,
-            eval_op=names_to_updates.values(),
-            variables_to_restore=variables_to_restore,
-            session_config=sess_config
-        )
+        if eval_interval_secs > 0:
+
+            slim.evaluation.evaluation_loop(
+                master='',
+                checkpoint_dir=checkpoint_path,
+                logdir=savedir,
+                num_evals=num_batches,
+                initial_op=None,
+                initial_op_feed_dict=None,
+                eval_op=names_to_updates.values(),
+                eval_op_feed_dict=None,
+                final_op=None,
+                final_op_feed_dict=None,
+                summary_op=tf.summary.merge_all(),
+                summary_op_feed_dict=None,
+                variables_to_restore=variables_to_restore,
+                eval_interval_secs=eval_interval_secs,
+                max_number_of_evaluations=None,
+                session_config=sess_config,
+                timeout=None
+            )
+
+        else:
+            if tf.gfile.IsDirectory(checkpoint_path):
+                checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
+            tf.logging.info('Evaluating %s' % checkpoint_path)
+
+            slim.evaluation.evaluate_once(
+                master='',
+                checkpoint_path=checkpoint_path,
+                logdir=savedir,
+                num_evals=num_batches,
+                eval_op=names_to_updates.values(),
+                variables_to_restore=variables_to_restore,
+                session_config=sess_config
+            )
 
 def parse_args():
 
@@ -136,6 +159,10 @@ def parse_args():
     parser.add_argument('--config', dest='config_file',
                         help='Path to the configuration file.',
                         required=True, type=str)
+
+    parser.add_argument('--eval_interval_secs', dest='eval_interval_secs',
+                        help='Go into an evaluation loop, waiting this many seconds between evaluations. Default is to evaluate once.',
+                        required=False, type=int, default=0)
 
     parser.add_argument('--batch_size', dest='batch_size',
                         help='The number of images in a batch.',
@@ -169,6 +196,7 @@ def main():
         checkpoint_path=args.checkpoint_path,
         savedir=args.savedir,
         max_iterations=args.batches,
+        eval_interval_secs=args.eval_interval_secs,
         cfg=cfg
     )
 
