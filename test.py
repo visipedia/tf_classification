@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import argparse
 import logging
+import os
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -12,7 +14,7 @@ from config.parse_config import parse_config_file
 from nets import nets_factory
 from preprocessing import inputs
 
-def test(tfrecords, checkpoint_path, savedir, max_iterations, eval_interval_secs, cfg):
+def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_secs, cfg):
     """
     Args:
         tfrecords (list)
@@ -105,10 +107,14 @@ def test(tfrecords, checkpoint_path, savedir, max_iterations, eval_interval_secs
 
         if eval_interval_secs > 0:
 
+            if not os.path.isdir(checkpoint_path):
+                raise ValueError("checkpoint_path should be a path to a directory when " \
+                                 "evaluating in a loop.")
+
             slim.evaluation.evaluation_loop(
                 master='',
                 checkpoint_dir=checkpoint_path,
-                logdir=savedir,
+                logdir=save_dir,
                 num_evals=num_batches,
                 initial_op=None,
                 initial_op_feed_dict=None,
@@ -126,14 +132,20 @@ def test(tfrecords, checkpoint_path, savedir, max_iterations, eval_interval_secs
             )
 
         else:
-            if tf.gfile.IsDirectory(checkpoint_path):
-                checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
+            if os.path.isdir(checkpoint_path):
+                checkpoint_dir = checkpoint_path
+                checkpoint_path = tf.train.latest_checkpoint(checkpoint_dir)
+
+                if checkpoint_path is None:
+                    raise ValueError("Unable to find a model checkpoint in the " \
+                                     "directory %s" % (checkpoint_dir,))
+
             tf.logging.info('Evaluating %s' % checkpoint_path)
 
             slim.evaluation.evaluate_once(
                 master='',
                 checkpoint_path=checkpoint_path,
-                logdir=savedir,
+                logdir=save_dir,
                 num_evals=num_batches,
                 eval_op=names_to_updates.values(),
                 variables_to_restore=variables_to_restore,
@@ -148,13 +160,13 @@ def parse_args():
                         help='Paths to tfrecords.', type=str,
                         nargs='+', required=True)
 
-    parser.add_argument('--savedir', dest='savedir',
-                          help='Path to directory to store summary files.', type=str,
-                          required=True)
-
     parser.add_argument('--checkpoint_path', dest='checkpoint_path',
                           help='Path to a specific model to test against. If a directory, then the newest checkpoint file will be used.', type=str,
                           required=True, default=None)
+
+    parser.add_argument('--save_dir', dest='savedir',
+                          help='Path to directory to store summary files.', type=str,
+                          required=True)
 
     parser.add_argument('--config', dest='config_file',
                         help='Path to the configuration file.',
@@ -194,7 +206,7 @@ def main():
     test(
         tfrecords=args.tfrecords,
         checkpoint_path=args.checkpoint_path,
-        savedir=args.savedir,
+        save_dir=args.savedir,
         max_iterations=args.batches,
         eval_interval_secs=args.eval_interval_secs,
         cfg=cfg

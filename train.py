@@ -23,6 +23,7 @@ from __future__ import print_function
 import argparse
 import copy
 import logging
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -176,8 +177,12 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes):
         if not excluded:
           variables_to_restore.append(var)
 
-    if tf.gfile.IsDirectory(pretrained_model_path):
+    if os.path.isdir(pretrained_model_path):
         checkpoint_path = tf.train.latest_checkpoint(pretrained_model_path)
+        if checkpoint_path is None:
+            raise ValueError(
+                "No model checkpoint file found in directory %s" % (pretrained_model_path))
+
     else:
         checkpoint_path = pretrained_model_path
 

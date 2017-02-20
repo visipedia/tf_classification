@@ -1,3 +1,4 @@
+# Testing specific configuration
 RANDOM_SEED : 1.0
 
 SESSION_CONFIG : {
