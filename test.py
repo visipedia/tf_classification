@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-import logging
 import os
 
 import numpy as np
@@ -23,8 +22,6 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         max_iterations (int)
         cfg (EasyDict)
     """
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
     tf.logging.set_verbosity(tf.logging.DEBUG)
 
     graph = tf.Graph()

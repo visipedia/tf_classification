@@ -22,7 +22,6 @@ from __future__ import print_function
 
 import argparse
 import copy
-import logging
 import os
 
 import numpy as np
@@ -203,8 +202,6 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         cfg (EasyDict)
         pretrained_model_path (str) : path to a pretrained Inception Network
     """
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
     tf.logging.set_verbosity(tf.logging.DEBUG)
 
     graph = tf.Graph()
