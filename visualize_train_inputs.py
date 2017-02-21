@@ -31,12 +31,12 @@ def visualize_train_inputs(tfrecords, cfg):
           capacity=cfg.QUEUE_CAPACITY,
           min_after_dequeue=cfg.QUEUE_MIN,
           add_summaries=False,
-          visualize=True
+          input_type='visualize'
         )
 
         coord = tf.train.Coordinator()
-        tf.initialize_all_variables().run()
-        tf.initialize_local_variables().run()
+        tf.global_variables_initializer().run()
+        tf.local_variables_initializer().run()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         plt.ion()

@@ -229,7 +229,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
             capacity=cfg.QUEUE_CAPACITY,
             min_after_dequeue=cfg.QUEUE_MIN,
             add_summaries=True,
-            visualize=False
+            input_type='train'
         )
 
         batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],

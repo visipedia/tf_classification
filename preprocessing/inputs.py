@@ -311,11 +311,27 @@ def create_visualization_batch(serialized_example, cfg, add_summaries):
     if distorted_image.dtype == tf.float32:
       distorted_image = tf.image.convert_image_dtype(distorted_image, dtype=tf.uint8)
 
-    return [('original_inputs', 'inputs', 'image_ids', 'labels', 'text_labels'), [original_image, distorted_image, image_id, label, text_label]]
+    return [('original_inputs', 'inputs', 'ids', 'labels', 'text_labels'), [original_image, distorted_image, image_id, label, text_label]]
+
+def create_classification_batch(serialized_example, cfg, add_summaries):
+    features = decode_serialized_example(serialized_example,
+                                            [('image/encoded', 'image'),
+                                             ('image/id', 'image_id')])
+
+
+    image = features['image']
+    image_id = features['image_id']
+
+    distorted_image = apply_distortions(image, cfg, add_summaries=add_summaries)
+
+    distorted_image = tf.subtract(distorted_image, 0.5)
+    distorted_image = tf.multiply(distorted_image, 2.0)
+
+    return [('inputs', 'ids'), [distorted_image, image_id]]
 
 def input_nodes(tfrecords, cfg, num_epochs=None, batch_size=32, num_threads=2,
                 shuffle_batch = True, random_seed=1, capacity = 1000, min_after_dequeue = 96,
-                add_summaries=True, visualize=False):
+                add_summaries=True, input_type='train'):
     """
     Args:
         tfrecords:
@@ -327,7 +343,7 @@ def input_nodes(tfrecords, cfg, num_epochs=None, batch_size=32, num_threads=2,
         capacity:
         min_after_dequeue:
         add_summaries: Add tensorboard summaries of the images
-        visualize:
+        input_type: 'train', 'visualize', 'test', 'classification'
     """
     with tf.name_scope('inputs'):
 
@@ -341,10 +357,15 @@ def input_nodes(tfrecords, cfg, num_epochs=None, batch_size=32, num_threads=2,
         reader = tf.TFRecordReader()
         _, serialized_example = reader.read(filename_queue)
 
-        if visualize:
-            batch_keys, data_to_batch = create_visualization_batch(serialized_example, cfg, add_summaries)
-        else:
+        if input_type=='train' or input_type=='test':
             batch_keys, data_to_batch = create_training_batch(serialized_example, cfg, add_summaries)
+        elif input_type=='visualize':
+            batch_keys, data_to_batch = create_visualization_batch(serialized_example, cfg, add_summaries)
+        elif input_type=='classification':
+            batch_keys, data_to_batch = create_classification_batch(serialized_example, cfg, add_summaries)
+        else:
+            raise ValueError("Unknown input type: %s. Options are `train`, `test`, " \
+                             "`visualize`, and `classification`." % (input_type,))
 
         if shuffle_batch:
             batch = tf.train.shuffle_batch(

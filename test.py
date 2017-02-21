@@ -41,32 +41,30 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             capacity=cfg.QUEUE_CAPACITY,
             min_after_dequeue=cfg.QUEUE_MIN,
             add_summaries=False,
-            visualize=False
+            input_type='test'
         )
 
-        arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME](
-            weight_decay=cfg.WEIGHT_DECAY,
-            batch_norm_decay=cfg.BATCHNORM_MOVING_AVERAGE_DECAY,
-            batch_norm_epsilon=cfg.BATCHNORM_EPSILON
-        )
+        arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME]()
 
         with slim.arg_scope(arg_scope):
             logits, end_points = nets_factory.networks_map[cfg.MODEL_NAME](
                 inputs=batch_dict['inputs'],
                 num_classes=cfg.NUM_CLASSES,
-                dropout_keep_prob=cfg.DROPOUT_KEEP_PROB,
                 is_training=False
             )
 
+            predictions = end_points['Predictions']
+            labels = tf.squeeze(batch_dict['labels'])
 
-        variable_averages = tf.train.ExponentialMovingAverage(
-            cfg.MOVING_AVERAGE_DECAY, global_step)
-        variables_to_restore = variable_averages.variables_to_restore(
-            slim.get_model_variables())
+        if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
+            variable_averages = tf.train.ExponentialMovingAverage(
+                cfg.MOVING_AVERAGE_DECAY, global_step)
+            variables_to_restore = variable_averages.variables_to_restore(
+                slim.get_model_variables())
+        else:
+            variables_to_restore = slim.get_variables_to_restore()
         variables_to_restore[global_step.op.name] = global_step
 
-        predictions = end_points['Predictions']
-        labels = tf.squeeze(batch_dict['labels'])
 
         # Define the metrics:
         metric_map = {
