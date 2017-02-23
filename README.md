@@ -168,7 +168,7 @@ $ CUDA_VISIBLE_DEVICES=0 python train.py \
 ---
 
 ## Test
-Once performance on the validation has plateaued, you can test the model on a held out set of images to see how well it generalizes to new data:
+Once performance on the validation data has plateaued (or some other criterion has been met), you can test the model on a held out set of images to see how well it generalizes to new data:
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/test/* \
