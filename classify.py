@@ -68,17 +68,7 @@ def classify(tfrecords, checkpoint_path, save_path, max_iterations, save_logits,
 
         saver = tf.train.Saver(variables_to_restore, reshape=True)
 
-        if max_iterations > 0:
-            num_batches = max_iterations
-        else:
-            # This ensures that we make a single pass over all of the data.
-            # We could use ceil if the batch queue is allowed to pad the last batch
-            if 'NUM_TEST_EXAMPLES' in cfg:
-                num_batches = np.floor(cfg.NUM_TEST_EXAMPLES / float(cfg.BATCH_SIZE))
-            else:
-                raise ValueError('`NUM_TEST_EXAMPLES not set in config, and `batches` '\
-                                 'not passed in')
-
+        num_batches = max_iterations
         num_images = num_batches * cfg.BATCH_SIZE
         label_array = np.empty(num_images, dtype=np.int32)
         id_array = np.empty(num_images, dtype=np.object)
@@ -177,10 +167,6 @@ def parse_args():
                         help='Path to the configuration file',
                         required=True, type=str)
 
-    parser.add_argument('--save_logits', dest='save_logits',
-                        help='Should the logits be saved?',
-                        action='store_true', default=False)
-
     parser.add_argument('--batch_size', dest='batch_size',
                         help='The number of images in a batch.',
                         required=True, type=int, default=None)
@@ -188,6 +174,10 @@ def parse_args():
     parser.add_argument('--batches', dest='batches',
                         help='Maximum number of iterations to run. Default is all records (modulo the batch size).',
                         required=True, type=int, default=0)
+
+    parser.add_argument('--save_logits', dest='save_logits',
+                        help='Should the logits be saved?',
+                        action='store_true', default=False)
 
     parser.add_argument('--model_name', dest='model_name',
                         help='The name of the architecture to use.',
