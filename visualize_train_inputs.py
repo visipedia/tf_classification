@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import argparse
 
-from builtins import range
 from matplotlib import pyplot as plt
 import tensorflow as tf
 
