@@ -134,12 +134,14 @@ If you are happy with the performance of the model, then you are ready to classi
 
 ## Classifying 
 If you want to classify data offline using the trained model then you can do:
+```
 python classify.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/test/* \
 --checkpoint_path /Users/GVH/Desktop/cub_train \
 --save_path /Users/GVH/Desktop/cub_train/logdir/results/classification_results.npz \
 --config /Users/GVH/Desktop/cub_train/config_test.yaml \
 --save_logits
+```
 
 ## Export & Compress
 To export a model for easy use on a mobile device you can use:
