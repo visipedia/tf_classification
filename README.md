@@ -1,7 +1,7 @@
 # TensorFlow Classification
 This repo contains training, testing and classifcation code for image classification using [TensorFlow](https://www.tensorflow.org/).
 
-TensorFlow 1.0 is required. The code is tested with Python 2.7 on Ubuntu 14.04 and Mac OSX 10.11
+TensorFlow 1.0 is required. The code is tested with Python 2.7 on Ubuntu 14.04 and Mac OSX 10.11. Check out the [requirements.txt](requirements.txt) file for a list of python dependencies. 
 
 ---
 
@@ -168,7 +168,7 @@ $ CUDA_VISIBLE_DEVICES=0 python train.py \
 ---
 
 ## Test
-Once performance on the validation has plateaued, you can test the model on a held out set of images to see how well it generalizes to new data:
+Once performance on the validation data has plateaued (or some other criterion has been met), you can test the model on a held out set of images to see how well it generalizes to new data:
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/test/* \
