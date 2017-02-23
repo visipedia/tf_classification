@@ -175,6 +175,8 @@ CUDA_VISIBLE_DEVICES=1 python classify.py \
 --checkpoint_path /Users/GVH/Desktop/cub_train \
 --save_path /Users/GVH/Desktop/cub_train/logdir/results/classification_results.npz \
 --config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--batch_size 32 \
+--batches 1000 \
 --save_logits
 ```
 
