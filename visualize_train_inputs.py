@@ -47,7 +47,7 @@ def visualize_train_inputs(tfrecords, cfg):
 
             original_images = output['original_inputs']
             distorted_images = output['inputs']
-            image_ids = output['image_ids']
+            image_ids = output['ids']
             labels = output['labels']
             text_labels = output['text_labels']
 
