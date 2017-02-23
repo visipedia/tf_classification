@@ -1,0 +1,32 @@
+# Testing specific configuration
+RANDOM_SEED : 1.0
+
+SESSION_CONFIG : {
+  LOG_DEVICE_PLACEMENT : false,
+  PER_PROCESS_GPU_MEMORY_FRACTION : 0.9
+}
+
+#################################################
+# Dataset Info
+
+NUM_CLASSES : 200
+
+MODEL_NAME : 'inception_v3'
+
+# END: Dataset Info
+#################################################
+# Image Processing and Augmentation 
+
+IMAGE_PROCESSING : {
+    INPUT_SIZE : 299
+}
+
+# END: Image Processing and Augmentation
+#################################################
+# Regularization 
+#
+# The decay to use for the moving average. If 0, then moving average is not computed
+MOVING_AVERAGE_DECAY : 0.9999
+
+# End: Regularization
+#################################################

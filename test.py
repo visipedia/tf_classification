@@ -72,7 +72,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         }
         if len(cfg.PRECISION_AT_K_METRIC) > 0:
             for k in cfg.PRECISION_AT_K_METRIC:
-                metric_map['Precision@%s' % k] = tf.metrics.sparse_average_precision_at_k(labels=labels, predictions=predictions, k=k)
+                metric_map['Precision_%s' % k] = tf.metrics.sparse_average_precision_at_k(labels=labels, predictions=predictions, k=k)
 
         names_to_values, names_to_updates = slim.metrics.aggregate_metric_map(metric_map)
 

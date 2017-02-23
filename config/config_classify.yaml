@@ -68,13 +68,5 @@ QUEUE_MIN :  200
 # The decay to use for the moving average. If 0, then moving average is not computed
 MOVING_AVERAGE_DECAY : 0.9999
 
-# The weight decay on the model weights
-WEIGHT_DECAY : 0.00004 
-
-BATCHNORM_MOVING_AVERAGE_DECAY : 0.9997
-BATCHNORM_EPSILON : 0.001
-
-DROPOUT_KEEP_PROB : 0.8
-
 # End: Regularization
 #################################################

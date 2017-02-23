@@ -114,38 +114,38 @@ def classify(tfrecords, checkpoint_path, save_path, max_iterations, save_logits,
             tf.local_variables_initializer().run()
             threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        try:
+            try:
 
-            # Restore from checkpoint
-            saver.restore(sess, checkpoint_path)
+                # Restore from checkpoint
+                saver.restore(sess, checkpoint_path)
 
-            print_str = ', '.join([
-              'Step: %d',
-              'Time/image (ms): %.1f'
-            ])
+                print_str = ', '.join([
+                  'Step: %d',
+                  'Time/image (ms): %.1f'
+                ])
 
-            step = 0
-            while not coord.should_stop():
+                step = 0
+                while not coord.should_stop():
 
-                t = time.time()
-                outputs = sess.run(fetches)
-                dt = time.time()-t
+                    t = time.time()
+                    outputs = sess.run(fetches)
+                    dt = time.time()-t
 
-                idx1 = cfg.BATCH_SIZE * step
-                idx2 = idx1 + cfg.BATCH_SIZE
-                label_array[idx1:idx2] = outputs[0]
-                id_array[idx1:idx2] = outputs[1]
-                if save_logits:
-                    logits_array[idx1:idx2] = outputs[2]
+                    idx1 = cfg.BATCH_SIZE * step
+                    idx2 = idx1 + cfg.BATCH_SIZE
+                    label_array[idx1:idx2] = outputs[0]
+                    id_array[idx1:idx2] = outputs[1]
+                    if save_logits:
+                        logits_array[idx1:idx2] = outputs[2]
 
-                step += 1
-                print(print_str % (step, (dt / cfg.BATCH_SIZE) * 1000))
+                    step += 1
+                    print(print_str % (step, (dt / cfg.BATCH_SIZE) * 1000))
 
-                if max_iterations > 0 and step == max_iterations:
-                    break
+                    if max_iterations > 0 and step == max_iterations:
+                        break
 
-        except tf.errors.OutOfRangeError as e:
-            pass
+            except tf.errors.OutOfRangeError as e:
+                pass
 
         coord.request_stop()
         coord.join(threads)
