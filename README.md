@@ -45,12 +45,17 @@ You can specify the name of the choosen network in the configuration yaml file. 
 ## Data Visualization
 Now that you have a configuration script for training, it is a good idea to visualize the inputs to the network and ensure that they look good. This allows you to debug any problems with your tfrecords and lets you play with different augmentation techniques. Visualize your data by doing:
 ```
-$ CUDA_VISIBLE_DEVICES=1 visualize_train_inputs.py \
+$ CUDA_VISIBLE_DEVICES=1 python visualize_train_inputs.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
 --config /Users/GVH/Desktop/cub_experiment/config_train.yaml
 ```
 
-If you are in a virtualenv and Matplotlib is complaining, then you may need to modify your environment. See this [FAQ](http://matplotlib.org/faq/virtualenv_faq.html) and [this document](http://matplotlib.org/faq/osx_framework.html#osxframework-faq) for fixing this issue. I use a virtualenv on my Mac OSX 10.11 machine and I needed to do the [PYTHONHOME work around](http://matplotlib.org/faq/osx_framework.html#pythonhome-function) for Matplotlib to work properly.
+If you are in a virtualenv and Matplotlib is complaining, then you may need to modify your environment. See this [FAQ](http://matplotlib.org/faq/virtualenv_faq.html) and [this document](http://matplotlib.org/faq/osx_framework.html#osxframework-faq) for fixing this issue. I use a virtualenv on my Mac OSX 10.11 machine and I needed to do the `PYTHONHOME` [work around](http://matplotlib.org/faq/osx_framework.html#pythonhome-function) for Matplotlib to work properly. In this case the command looks like:
+```
+$ CUDA_VISIBLE_DEVICES=1 frameworkpython visualize_train_inputs.py \
+--tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
+--config /Users/GVH/Desktop/cub_experiment/config_train.yaml
+```
 
 --
 
