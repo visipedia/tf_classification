@@ -47,7 +47,7 @@ Now that you have a configuration script for training, it is a good idea to visu
 ```
 $ CUDA_VISIBLE_DEVICES=1 visualize_train_inputs.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
---config /Users/GVH/Desktop/cub_train/config_train.yaml
+--config /Users/GVH/Desktop/cub_experiment/config_train.yaml
 ```
 
 If you are in a virtualenv and Matplotlib is complaining, then you may need to modify your environment. See this [FAQ](http://matplotlib.org/faq/virtualenv_faq.html) and [this document](http://matplotlib.org/faq/osx_framework.html#osxframework-faq) for fixing this issue. I use a virtualenv on my Mac OSX 10.11 machine and I needed to do the [PYTHONHOME work around](http://matplotlib.org/faq/osx_framework.html#pythonhome-function) for Matplotlib to work properly.
@@ -63,8 +63,8 @@ You'll need to scrap the final layer of a pretrained network in order to output 
 ```
 $ CUDA_VISIBLE_DEVICES=0 python train.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
---logdir /Users/GVH/Desktop/cub_train/logdir/finetune \
---config /Users/GVH/Desktop/cub_train/config_train.yaml \
+--logdir /Users/GVH/Desktop/cub_experiment/logdir/finetune \
+--config /Users/GVH/Desktop/cub_experiment/config_train.yaml \
 --pretrained_model /Users/GVH/Desktop/Inception_Models/inception_v3.ckpt \
 --trainable_scopes InceptionV3/Logits InceptionV3/AuxLogits \
 --checkpoint_exclude_scopes InceptionV3/Logits InceptionV3/AuxLogits \
@@ -77,9 +77,9 @@ We'll want to monitor performance of the model on a validation set. Once the mod
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/val/* \
---save_dir /Users/GVH/Desktop/cub_train/logdir/finetune/val_summaries \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir/finetune \
---config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--save_dir /Users/GVH/Desktop/cub_experiment/logdir/finetune/val_summaries \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir/finetune \
+--config /Users/GVH/Desktop/cub_experiment/config_test.yaml \
 --batches 100 \
 --eval_interval_secs 300
 ```
@@ -88,16 +88,16 @@ You may want to also monitor the accuracy on the train set. Simply pass in the t
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
---save_dir /Users/GVH/Desktop/cub_train/logdir/finetune/train_summaries \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir/finetune \
---config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--save_dir /Users/GVH/Desktop/cub_experiment/logdir/finetune/train_summaries \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir/finetune \
+--config /Users/GVH/Desktop/cub_experiment/config_test.yaml \
 --batches 100 \
 --eval_interval_secs 300
 ```
 
 Keeping the train summaries and val summaries in separate directories will keep the tensorboard ui clean. To monitor the training process you can fireup tensorboard:
 ```
-$ tensorboard --logdir=/Users/GVH/Desktop/cub_train/logdir --port=6006
+$ tensorboard --logdir=/Users/GVH/Desktop/cub_experiment/logdir --port=6006
 ```
 
 ### Full Train
@@ -105,9 +105,9 @@ Now we can train all of the layers of the model. We'll store the generated files
 ```
 $ CUDA_VISIBLE_DEVICES=0 python train.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/* \
---logdir /Users/GVH/Desktop/cub_train/logdir \
---config /Users/GVH/Desktop/cub_train/config_train.yaml \
---pretrained_model /Users/GVH/Desktop/cub_train/logdir/finetune
+--logdir /Users/GVH/Desktop/cub_experiment/logdir \
+--config /Users/GVH/Desktop/cub_experiment/config_train.yaml \
+--pretrained_model /Users/GVH/Desktop/cub_experiment/logdir/finetune
 ```
 
 #### Monitoring Progress
@@ -116,9 +116,9 @@ And for watching the validation performance we can do:
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/val/* \
---save_dir /Users/GVH/Desktop/cub_train/logdir/val_summaries \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir \
---config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--save_dir /Users/GVH/Desktop/cub_experiment/logdir/val_summaries \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir \
+--config /Users/GVH/Desktop/cub_experiment/config_test.yaml \
 --batches 100 \
 --eval_interval_secs 300
 ```
@@ -127,16 +127,16 @@ Similar for the train data:
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
---save_dir /Users/GVH/Desktop/cub_train/logdir/train_summaries \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir \
---config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--save_dir /Users/GVH/Desktop/cub_experiment/logdir/train_summaries \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir \
+--config /Users/GVH/Desktop/cub_experiment/config_test.yaml \
 --batches 100 \
 --eval_interval_secs 300
 ```
 
 The command for tensorboard doesn't need to change:
 ```
-$ tensorboard --logdir=/Users/GVH/Desktop/cub_train/logdir --port=6006
+$ tensorboard --logdir=/Users/GVH/Desktop/cub_experiment/logdir --port=6006
 ```
 You will be able to see the fine-tune and the full train data.
 
@@ -145,8 +145,8 @@ In this case, the `experiment/logdir/finetune` is not necessary. We'll allow all
 ```
 $ CUDA_VISIBLE_DEVICES=0 python train.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
---logdir /Users/GVH/Desktop/cub_train/logdir/ \
---config /Users/GVH/Desktop/cub_train/config_train.yaml \
+--logdir /Users/GVH/Desktop/cub_experiment/logdir/ \
+--config /Users/GVH/Desktop/cub_experiment/config_train.yaml \
 --pretrained_model /Users/GVH/Desktop/Inception_Models/inception_v3.ckpt \
 --checkpoint_exclude_scopes InceptionV3/Logits InceptionV3/AuxLogits
 ```
@@ -156,8 +156,8 @@ If you have enough data to train the network from scratch, then you can do the f
 ```
 $ CUDA_VISIBLE_DEVICES=0 python train.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/train/* \
---logdir /Users/GVH/Desktop/cub_train/logdir/ \
---config /Users/GVH/Desktop/cub_train/config_train.yaml
+--logdir /Users/GVH/Desktop/cub_experiment/logdir/ \
+--config /Users/GVH/Desktop/cub_experiment/config_train.yaml
 ``` 
 
 ---
@@ -167,9 +167,9 @@ Once performance on the validation has plateaued, you can test the model on a he
 ```
 $ CUDA_VISIBLE_DEVICES=1 python test.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/test/* \
---save_dir /Users/GVH/Desktop/cub_train/logdir/test_summaries \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir \
---config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--save_dir /Users/GVH/Desktop/cub_experiment/logdir/test_summaries \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir \
+--config /Users/GVH/Desktop/cub_experiment/config_test.yaml \
 --batch_size 32 \
 --model_name inception_v3 \
 --batches 100 \
@@ -184,9 +184,9 @@ If you want to classify data offline using the trained model then you can do:
 ```
 CUDA_VISIBLE_DEVICES=1 python classify.py \
 --tfrecords /Users/GVH/Desktop/cub_tfrecords/new/* \
---checkpoint_path /Users/GVH/Desktop/cub_train \
---save_path /Users/GVH/Desktop/cub_train/logdir/results/classification_results.npz \
---config /Users/GVH/Desktop/cub_train/config_test.yaml \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment \
+--save_path /Users/GVH/Desktop/cub_experiment/logdir/results/classification_results.npz \
+--config /Users/GVH/Desktop/cub_experiment/config_test.yaml \
 --batch_size 32 \
 --batches 1000 \
 --save_logits
@@ -200,19 +200,19 @@ The output of the script is a numpy uncompressed .npz file saved at `--save_path
 To export a model for easy use on a mobile device you can use:
 ```
 python export.py \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir \
---export_dir /Users/GVH/Desktop/cub_train \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir \
+--export_dir /Users/GVH/Desktop/cub_experiment \
 --export_version 1 \
---config /Users/GVH/Desktop/cub_train/config_export.yaml
+--config /Users/GVH/Desktop/cub_experiment/config_export.yaml
 ```
 The input node is called `images` and the output node is called `Predictions`.
 
 If you are going to use the model with [TensorFlow Serving](https://www.tensorflow.org/deploy/tfserve) then you can use the following:
 ```
 python export.py \
---checkpoint_path /Users/GVH/Desktop/cub_train/logdir \
---export_dir /Users/GVH/Desktop/cub_train \
+--checkpoint_path /Users/GVH/Desktop/cub_experiment/logdir \
+--export_dir /Users/GVH/Desktop/cub_experiment \
 --export_version 1 \
---config /Users/GVH/Desktop/cub_train/config_export.yaml \
+--config /Users/GVH/Desktop/cub_experiment/config_export.yaml \
 --serving
 ```
