@@ -1,25 +1,35 @@
 # Testing specific configuration
+
 RANDOM_SEED : 1.0
 
 SESSION_CONFIG : {
+  # If true, then the device location of each variable will be printed
   LOG_DEVICE_PLACEMENT : false,
+
+  # How much GPU memory we are allowed to pre-allocate
   PER_PROCESS_GPU_MEMORY_FRACTION : 0.9
 }
+
 #################################################
 # Metrics
-
+#
+# Top-k precision information. Each entry is a different k value.
 PRECISION_AT_K_METRIC : [3, 5]
 
 # END: Metrics
 #################################################
 # Dataset Info
-
+# The number of classes we are classifying
 NUM_CLASSES : 200
 
+# Number of test examples in the tfrecords. This is needed to compute the total number of
+# batches to pass through the network.
 NUM_TEST_EXAMPLES : 5794
 
+# The number of images to pass through the network on each iteration
 BATCH_SIZE : 32
 
+# The model architecture to use.
 MODEL_NAME : 'inception_v3'
 
 # END: Dataset Info
@@ -27,34 +37,14 @@ MODEL_NAME : 'inception_v3'
 # Image Processing and Augmentation 
 
 IMAGE_PROCESSING : {
+    # All images will be resized to the [INPUT_SIZE, INPUT_SIZE, 3]
     INPUT_SIZE : 299,
 
     # 1) First we extract regions from the image
     REGION_TYPE : 'image', # one of 'image' or 'bbox'
-    BBOX_CFG : {
-        CROP_METHOD : 'random', # one of 'tight', 'expanded', 'random'
-        EXPANDED_CFG : {
-            WIDTH_EXPANSION : 2.0, # Expand the width by a factor of 2 (centrally)
-            HEIGHT_EXPANSION : 2.0, # Expand the height by a factor of 2 (centrally)
-        },
-        RANDOM_CFG : {
-            MIN_AREA : 0.4, # between 0 and 1, how much of the original bbox area needs to be present
-            MAX_AREA : 4.0, # between 0 and inf, how much can the original bbox area be expanded? 
-            MIN_ASPECT_RATIO : 0.7, 
-            MAX_ASPECT_RATIO : 1.3,
-            MAX_ATTEMPTS : 100, # maximum number of attempts before returning the bounding box
-        }
-    },
     WHOLE_IMAGE_CFG: {
         # Fraction of time to take a random crop from the image, 0 is never, 1 is always
-        DO_RANDOM_CROP : 0,
-        RANDOM_CROP_CFG: {
-            MIN_AREA : 0.4, # between 0 and 1
-            MAX_AREA : 1.0, # between 0 and 1
-            MIN_ASPECT_RATIO : 0.7, 
-            MAX_ASPECT_RATIO : 1.3,
-            MAX_ATTEMPTS : 100, # maximum number of attempts to satisfy the above constraints before returning the whole image
-        }
+        DO_RANDOM_CROP : 0
     },
 
     # 2) We need to resize the extracted regions to feed into the network. 
@@ -92,6 +82,8 @@ QUEUE_MIN :  200
 # Regularization 
 #
 # The decay to use for the moving average. If 0, then moving average is not computed
+# When restoring models, this value is needed to determine whether to restore moving
+# average variables or not.
 MOVING_AVERAGE_DECAY : 0.9999
 
 # End: Regularization

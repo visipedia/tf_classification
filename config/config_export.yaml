@@ -1,16 +1,21 @@
-# Testing specific configuration
+# Export specific configuration
+
 RANDOM_SEED : 1.0
 
 SESSION_CONFIG : {
+  # If true, then the device location of each variable will be printed
   LOG_DEVICE_PLACEMENT : false,
+
+  # How much GPU memory we are allowed to pre-allocate
   PER_PROCESS_GPU_MEMORY_FRACTION : 0.9
 }
 
 #################################################
 # Dataset Info
-
+# The number of classes we are classifying
 NUM_CLASSES : 200
 
+# The model architecture to use.
 MODEL_NAME : 'inception_v3'
 
 # END: Dataset Info
@@ -18,6 +23,7 @@ MODEL_NAME : 'inception_v3'
 # Image Processing and Augmentation 
 
 IMAGE_PROCESSING : {
+    # Images are assumed to be raveled, and have length  INPUT_SIZE * INPUT_SIZE * 3
     INPUT_SIZE : 299
 }
 
@@ -26,6 +32,8 @@ IMAGE_PROCESSING : {
 # Regularization 
 #
 # The decay to use for the moving average. If 0, then moving average is not computed
+# When restoring models, this value is needed to determine whether to restore moving
+# average variables or not.
 MOVING_AVERAGE_DECAY : 0.9999
 
 # End: Regularization
