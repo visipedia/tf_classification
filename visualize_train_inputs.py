@@ -11,7 +11,7 @@ import tensorflow as tf
 from config.parse_config import parse_config_file
 from preprocessing.inputs import input_nodes
 
-def visualize_train_inputs(tfrecords, cfg):
+def visualize_train_inputs(tfrecords, cfg, show_text_labels=False):
 
     graph = tf.Graph()
     sess = tf.Session(graph = graph)
@@ -31,7 +31,8 @@ def visualize_train_inputs(tfrecords, cfg):
           capacity=cfg.QUEUE_CAPACITY,
           min_after_dequeue=cfg.QUEUE_MIN,
           add_summaries=False,
-          input_type='visualize'
+          input_type='visualize',
+          fetch_text_labels=show_text_labels
         )
 
         # Convert float images to uint8 images
@@ -56,7 +57,8 @@ def visualize_train_inputs(tfrecords, cfg):
             distorted_images = output['inputs']
             image_ids = output['ids']
             labels = output['labels']
-            #text_labels = output['text_labels']
+            if show_text_labels:
+                text_labels = output['text_labels']
 
             for b in range(cfg.BATCH_SIZE):
 
@@ -71,10 +73,15 @@ def visualize_train_inputs(tfrecords, cfg):
 
                 image_id = image_ids[b]
                 label = labels[b]
-                #text_label = text_labels[b]
 
                 fig = plt.figure('Train Inputs')
-                st = fig.suptitle("Image: %s\nLabel: %d" % (image_id, label), fontsize=12)
+
+                if show_text_labels:
+                    text_label = text_labels[b]
+                    st = fig.suptitle("Image: %s\nLabel: %d\nText: %s" %
+                                      (image_id, label, text_label), fontsize=12)
+                else:
+                    st = fig.suptitle("Image: %s\nLabel: %d" % (image_id, label), fontsize=12)
 
                 plt.subplot(2, 1, 1)
                 plt.imshow(original_image)
@@ -112,9 +119,9 @@ def parse_args():
                         help='Path to the configuration file',
                         required=True, type=str)
 
-    # parser.add_argument('--text_labels', dest='show_text',
-#                         help='Path to the configuration file',
-#                         action='store_true', default=False)
+    parser.add_argument('--text_labels', dest='show_text_labels',
+                        help='Path to the configuration file',
+                        action='store_true', default=False)
 
     args = parser.parse_args()
     return args
@@ -124,7 +131,8 @@ def main():
   cfg = parse_config_file(args.config_file)
   visualize_train_inputs(
     tfrecords=args.tfrecords,
-    cfg=cfg
+    cfg=cfg,
+    show_text_labels=args.show_text_labels
   )
 
 

@@ -32,50 +32,55 @@ MODEL_NAME : 'inception_v3'
 # END: Dataset Info
 #################################################
 # Image Processing and Augmentation 
-
+# There are 5 steps to image processing:
+# 1) Extract regions from the image
+# 2) Extract a crops from each region
+# 3) Resize the crops for the network architecture
+# 4) Flip the crops
+# 5) Modify the colors of the crops
 IMAGE_PROCESSING : {
     # All images will be resized to the [INPUT_SIZE, INPUT_SIZE, 3]
     INPUT_SIZE : 299,
 
     # 1) First we extract regions from the image
-    REGION_TYPE : 'image', # one of 'image' or 'bbox'
+    # What type of region should be extracted, either 'image' or 'bbox'
+    REGION_TYPE : 'image',
+
+    # Specific whole image region extraction configuration
+    WHOLE_IMAGE_CFG : {},
+
+    # Specific bounding box region extraction configuration
     BBOX_CFG : {
-        CROP_METHOD : 'random', # one of 'tight', 'expanded', 'random'
-        EXPANDED_CFG : {
-            WIDTH_EXPANSION : 2.0, # Expand the width by a factor of 2 (centrally)
-            HEIGHT_EXPANSION : 2.0, # Expand the height by a factor of 2 (centrally)
-        },
-        RANDOM_CFG : {
-            MIN_AREA : 0.4, # between 0 and 1, how much of the original bbox area needs to be present
-            MAX_AREA : 4.0, # between 0 and inf, how much can the original bbox area be expanded? 
-            MIN_ASPECT_RATIO : 0.7, 
-            MAX_ASPECT_RATIO : 1.3,
-            MAX_ATTEMPTS : 100, # maximum number of attempts before returning the bounding box
-        }
-    },
-    WHOLE_IMAGE_CFG: {
-        # Fraction of time to take a random crop from the image, 0 is never, 1 is always
-        DO_RANDOM_CROP : 0.75,
-        RANDOM_CROP_CFG: {
-            MIN_AREA : 0.4, # between 0 and 1
-            MAX_AREA : 1.0, # between 0 and 1
-            MIN_ASPECT_RATIO : 0.7, 
-            MAX_ASPECT_RATIO : 1.3,
-            MAX_ATTEMPTS : 100, # maximum number of attempts to satisfy the above constraints before returning the whole image
+        # We can centrally expand a bbox (i.e. turn a tight crop into a loose crop)
+        # The fraction of time to expand the bounding box, 0 is never, 1 is always
+        DO_EXPANSION : 1,
+        EXPANSION_CFG : {
+            WIDTH_EXPANSION_FACTOR : 2.0, # Expand the width by a factor of 2 (centrally)
+            HEIGHT_EXPANSION_FACTOR : 2.0, # Expand the height by a factor of 2 (centrally)
         }
     },
 
-    # 2) We need to resize the extracted regions to feed into the network. 
+    # 2) Then we take a random crop from the region
+    # The fraction of time to take a random crop, 0 is never, 1 is always
+    DO_RANDOM_CROP : 1,
+    RANDOM_CROP_CFG : {
+        MIN_AREA : 0.5, # between 0 and 1, how much of the region must be included
+        MAX_AREA : 1.0, # between 0 and 1, how much of the region can be included
+        MIN_ASPECT_RATIO : 0.7, # minimum aspect ratio of the crop
+        MAX_ASPECT_RATIO : 1.33, # maximum aspect ratio of the crop
+        MAX_ATTEMPTS : 100, # maximum number of attempts before returning the whole region
+    },
+
+    # 3) We need to resize the extracted regions to feed into the network. 
     MAINTAIN_ASPECT_RATIO : false,
     # Avoid slower resize operations (bi-cubic, etc.)
     RESIZE_FAST : false,
 
-    # 3) We can flip the regions
+    # 4) We can flip the regions
     # Randomly flip the image left right, 50% chance of flipping
     DO_RANDOM_FLIP_LEFT_RIGHT : true,
 
-    # 4) We can distort the colors of the regions
-    # Color distortion
+    # 5) We can distort the colors of the regions
     # The fraction of time to distort the color, 0 is never, 1 is always
     DO_COLOR_DISTORTION : 0.3, 
     # Avoids slower ops (random_hue and random_contrast)
