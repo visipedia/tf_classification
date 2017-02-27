@@ -1,6 +1,11 @@
 # TensorFlow Classification
 This repo contains training, testing and classifcation code for image classification using [TensorFlow](https://www.tensorflow.org/).
 
+Checkout the [Wiki](https://github.com/visipedia/tf_classification/wiki) for more detailed tutorials. 
+
+---
+
+## Requirements
 TensorFlow 1.0 is required. The code is tested with Python 2.7 on Ubuntu 14.04 and Mac OSX 10.11. Check out the [requirements.txt](requirements.txt) file for a list of python dependencies. 
 
 ---
