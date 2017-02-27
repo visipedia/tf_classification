@@ -165,8 +165,6 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes):
     if checkpoint_exclude_scopes:
         exclusions = [scope.strip() for scope in checkpoint_exclude_scopes]
 
-    exclusions.append('inputs')
-
     variables_to_restore = []
     for var in slim.get_model_variables():
         excluded = False
@@ -238,9 +236,6 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
 
         input_summaries = copy.copy(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
-        for s in input_summaries:
-            print(s)
-
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME](
             weight_decay=cfg.WEIGHT_DECAY,
             batch_norm_decay=cfg.BATCHNORM_MOVING_AVERAGE_DECAY,
@@ -288,20 +283,6 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
           tf.summary.scalar('learning_rate', lr)
         ] + input_summaries)
 
-
-        #final_distorted_image = graph.get_tensor_by_name('inputs/while/final_distorted_image:0')
-        #final_distorted_image = inputs.final_distorted_image
-#         summary_op = tf.summary.merge([
-#             #tf.summary.image('final_distorted_images', tf.expand_dims(final_distorted_image, 0)),
-#             tf.summary.scalar('total_loss', total_loss),
-#             tf.summary.scalar('learning_rate', lr)
-#         ] + input_summaries)
-
-        #tf.summary.scalar('total_loss', total_loss)
-        #tf.summary.scalar('learning_rate', lr)
-
-
-
         sess_config = tf.ConfigProto(
           log_device_placement=cfg.SESSION_CONFIG.LOG_DEVICE_PLACEMENT,
           allow_soft_placement = True,
@@ -333,7 +314,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train the classification system')
 
     parser.add_argument('--tfrecords', dest='tfrecords',
-                        help='paths to tfrecords files that contain the training data', type=str,
+                        help='Paths to tfrecord files.', type=str,
                         nargs='+', required=True)
 
     parser.add_argument('--logdir', dest='logdir',

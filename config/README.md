@@ -24,7 +24,7 @@ Deep neural networks are notoriously data hungry. One technique for increasing t
 | Config Name | Type | Description |
 :----:|:----:|------------|
 INPUT_SIZE | int | All images will be resized to [`INPUT_SIZE`, `INPUT_SIZE`, 3] prior to passing through the network. You'll want to set this to the same value that the pretrained model used. See the nets [README](../nets/README.md) for the input size of each model architecture. |
-REGION_TYPE | str | Which region should be used when creating an example? Possible values are `image`. |
+REGION_TYPE | str | Which region should be used when creating an example? Possible values are `image` and `bbox`. |
 MAINTAIN_ASPECT_RATIO | bool | When we resize an extracted region, should we maintain the aspect ratio? Or just squish it? 
 RESIZE_FAST | bool | If true, then slower resize operations will be avoided and only [bilinear resizing](https://en.wikipedia.org/wiki/Bilinear_interpolation) will be used. Otherwise, a random choice between [bilinear](), [nearest neighbor](https://en.wikipedia.org/wiki/Nearest-neighbor_interpolation), [bicubic](https://en.wikipedia.org/wiki/Bicubic_interpolation) and area interpolation will be used. |
 DO_RANDOM_FLIP_LEFT_RIGHT | bool | If true, then each region has a 50% chance of being flipped. | 
@@ -33,17 +33,35 @@ COLOR_DISTORT_FAST | bool | Its possible to distort the brightness, saturation, 
 
 #### Region Extraction
 
-`WHOLE_IMAGE_CFG` contains parameters specific to cropping a patch from the entire image:
+Currently there are two different region extraction protocols: 
+* `image`: The entire image is extracted and passed to the next phase of augmentation 
+* `bbox`: Each bounding box in the tfrecord is used to crop out an image region. These regions are passed on to the next phase of augmentation. If there are `n` bounding boxes in a tfrecord, then `n` regions will be extracted from the image. 
+
+For bounding boxes, we can specify wether we want to enlarge the box. This can be used as another form of augmentation (loose bounding boxes vs tight bounding boxes).
 
 | Config Name | Type | Description |
 :----:|:----:|------------|
-DO_RANDOM_CROP | float | Value between 0 and 1. 0 means never crop a training image. 1 means always take a crop from a training image. |
-RANDOM_CROP_CFG | | This contains parameters that controls the types of crops that are possible. 
-RANDOM_CROP_CFG.<br />MIN_AREA | float | Value between 0 and 1. This controls how much of the image is required to be in the crop, essentially controlling how small a crop can be. |
+DO_EXPANSION | float | Value between 0 and 1. 0 means never expand the box. 1 means always expand the box. |
+EXPANSION_CFG | | Contains the parameters controlling the expansion of the bounding box. | 
+EXPANSION_CFG.<br />WIDTH_EXPANSION_FACTOR | float | Scaling factor for the width of the box. | 
+EXPANSION_CFG.<br />HEIGHT_EXPANSION_FACTOR | float | Scaling factor for the height of the box. | 
+
+
+#### Random Cropping
+
+Each region that is extracted from an image can then be randomly cropped. Again, this is a form of data augmentation. We are trying to make the network robust to changes in the data that do not effect the class label. 
+
+`RANDOM_CROP_CFG` contains parameters for cropping out a rectangular patch from each region. 
+
+| Config Name | Type | Description |
+:----:|:----:|------------|
+DO_RANDOM_CROP | float | Value between 0 and 1. 0 means never crop a region. 1 means always take a crop. |
+RANDOM_CROP_CFG | | This contains parameters that controls the types of crops that are possible. |
+RANDOM_CROP_CFG.<br />MIN_AREA | float | Value between 0 and 1. This controls how much of the region is required to be in the crop, essentially controlling how small a crop can be. |
 RANDOM_CROP_CFG.<br />MAX_AREA | float | Value between 0 and 1. This controls the maximum size of the crop. |
 RANDOM_CROP_CFG.<br />MIN_ASPECT_RATIO | float | The minimum [aspect ratio](https://en.wikipedia.org/wiki/Aspect_ratio_(image)) of the crop. Don't forget that this crop will be resized to [`INPUT_SIZE`, `INPUT_SIZE`, 3] prior to passing through the network. |
 RANDOM_CROP_CFG.<br />MAX_ASPECT_RATIO | float | The maximum [aspect ratio](https://en.wikipedia.org/wiki/Aspect_ratio_(image)) of the crop. Don't forget that this crop will be resized to [`INPUT_SIZE`, `INPUT_SIZE`, 3] prior to passing through the network. |
-RANDOM_CROP_CFG.<br />MAX_ATTEMPTS | int | The number of crop attempts to try before returning the whole image. |
+RANDOM_CROP_CFG.<br />MAX_ATTEMPTS | int | The number of crop attempts to try before returning the whole region. |
 
 ### Queues
 This section of the config file contains parameters for controlling the queueing of data to feed the network. These setting depend on the number of cores in your machine and the amount of memory available. Please see the comments in the example config file for more information. 

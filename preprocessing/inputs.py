@@ -184,40 +184,10 @@ class DistortedInputs():
         self.cfg = cfg
         self.add_summaries = add_summaries
 
-       #  self.final_distorted_image = tf.Variable(initial_value=tf.zeros([299, 299, 3], dtype=tf.float32),
-#                         trainable=False,
-#                         validate_shape=False,
-#                         name="final_distorted_image")
-
-        # self.image_summaries = tf.TensorArray(
-#             dtype=tf.float32,
-#             size=4,
-#             element_shape=tf.TensorShape([1, cfg.INPUT_SIZE, cfg.INPUT_SIZE, 3]
-#         )
-    #)
-
     def apply(self, original_image, bboxes, distorted_inputs, image_summaries, current_index):
 
         cfg = self.cfg
         add_summaries = self.add_summaries
-
-#         add_summaries = False
-#         cfg = EasyDict()
-#         cfg.INPUT_SIZE = 299
-#         cfg.WHOLE_IMAGE_CFG = {}
-#         cfg.DO_RANDOM_CROP = 1
-#         cfg.RANDOM_CROP_CFG = {}
-#         cfg.RANDOM_CROP_CFG.MIN_ASPECT_RATIO = .7
-#         cfg.RANDOM_CROP_CFG.MAX_ASPECT_RATIO = 1.3
-#         cfg.RANDOM_CROP_CFG.MIN_AREA = .4
-#         cfg.RANDOM_CROP_CFG.MAX_AREA = 1
-#         cfg.RANDOM_CROP_CFG.MAX_ATTEMPTS = 100
-#         cfg.MAINTAIN_ASPECT_RATIO = False
-#         cfg.RESIZE_FAST = False
-#         cfg.DO_RANDOM_FLIP_LEFT_RIGHT = True
-#         cfg.DO_COLOR_DISTORTION = .5
-#         cfg.COLOR_DISTORT_FAST = False
-
 
         image_shape = tf.shape(original_image)
         image_height = tf.cast(image_shape[0], dtype=tf.float32) # cast so that we can multiply them by the bbox coords
@@ -241,7 +211,6 @@ class DistortedInputs():
         )
         image_height = bbox_height
         image_width = bbox_width
-
 
         # Convert the pixel values to be in the range [0,1]
         if image.dtype != tf.float32:
@@ -318,14 +287,9 @@ class DistortedInputs():
             distorted_image = tf.cond(do_color_distortion, lambda: tf.identity(distorted_color_image), lambda: tf.identity(distorted_image))
 
         distorted_image.set_shape([cfg.INPUT_SIZE, cfg.INPUT_SIZE, 3])
-        #final_distorted_image = tf.identity(distorted_image, name='final_distorted_image')
-
-        #self.final_distorted_image.assign(distorted_image)
-        #self.image_summaries = self.image_summaries.write(0, tf.expand_dims(distorted_image, 0))
 
         # Add a summary
         if add_summaries:
-            #tf.summary.image('final_distorted_images', tf.expand_dims(distorted_image, 0))
             image_summaries = image_summaries.write(3, tf.expand_dims(distorted_image, 0))
 
         # Add the distorted image to the TensorArray
@@ -333,140 +297,6 @@ class DistortedInputs():
 
         return [original_image, bboxes, distorted_inputs, image_summaries, current_index + 1]
 
-def apply_distortions(original_image, bboxes, distorted_inputs, current_index):
-
-
-        add_summaries = True
-        cfg = EasyDict()
-        cfg.INPUT_SIZE = 299
-        cfg.WHOLE_IMAGE_CFG = {}
-        cfg.DO_RANDOM_CROP = 1
-        cfg.RANDOM_CROP_CFG = {}
-        cfg.RANDOM_CROP_CFG.MIN_ASPECT_RATIO = .7
-        cfg.RANDOM_CROP_CFG.MAX_ASPECT_RATIO = 1.3
-        cfg.RANDOM_CROP_CFG.MIN_AREA = .4
-        cfg.RANDOM_CROP_CFG.MAX_AREA = 1
-        cfg.RANDOM_CROP_CFG.MAX_ATTEMPTS = 100
-        cfg.MAINTAIN_ASPECT_RATIO = False
-        cfg.RESIZE_FAST = False
-        cfg.DO_RANDOM_FLIP_LEFT_RIGHT = True
-        cfg.DO_COLOR_DISTORTION = .5
-        cfg.COLOR_DISTORT_FAST = False
-
-
-        image_shape = tf.shape(original_image)
-        image_height = tf.cast(image_shape[0], dtype=tf.float32) # cast so that we can multiply them by the bbox coords
-        image_width = tf.cast(image_shape[1], dtype=tf.float32)
-
-        # First thing we need to do is crop out the bbox region from the image
-        bbox = bboxes[current_index]
-        xmin = tf.cast(bbox[0] * image_width, tf.int32)
-        ymin = tf.cast(bbox[1] * image_height, tf.int32)
-        xmax = tf.cast(bbox[2] * image_width, tf.int32)
-        ymax = tf.cast(bbox[3] * image_height, tf.int32)
-        bbox_width = xmax - xmin
-        bbox_height = ymax - ymin
-
-        image = tf.image.crop_to_bounding_box(
-            image=original_image,
-            offset_height=ymin,
-            offset_width=xmin,
-            target_height=bbox_height,
-            target_width=bbox_width
-        )
-        image_height = bbox_height
-        image_width = bbox_width
-
-
-        # Convert the pixel values to be in the range [0,1]
-        if image.dtype != tf.float32:
-          image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-
-        # Add a summary of the original data
-        if add_summaries:
-            with tf.name_scope('summaries'):
-                tf.summary.image('original_images', tf.expand_dims(image, 0))
-
-        # Extract a distorted bbox
-        if cfg.DO_RANDOM_CROP > 0:
-            r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
-            do_crop = tf.less(r, cfg.DO_RANDOM_CROP)
-            rc_cfg = cfg.RANDOM_CROP_CFG
-            bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
-            distorted_image, distorted_bbox = tf.cond(do_crop,
-                    lambda: distorted_bounding_box_crop(image, bbox,
-                                                           aspect_ratio_range=(rc_cfg.MIN_ASPECT_RATIO, rc_cfg.MAX_ASPECT_RATIO),
-                                                           area_range=(rc_cfg.MIN_AREA, rc_cfg.MAX_AREA),
-                                                           max_attempts=rc_cfg.MAX_ATTEMPTS),
-                    lambda: tf.tuple([image, bbox])
-                )
-        else:
-            distorted_image = tf.identity(image)
-
-        distorted_image.set_shape([None, None, 3])
-
-        # Add a summary
-        if add_summaries:
-            with tf.name_scope('summaries'):
-                image_with_distorted_box = tf.image.draw_bounding_boxes(
-                    tf.expand_dims(image, 0), distorted_bbox)
-                tf.summary.image('images_with_random_crop',
-                                 image_with_distorted_box)
-
-        # Resize the distorted image to the correct dimensions for the network
-        if cfg.MAINTAIN_ASPECT_RATIO:
-            shape = tf.shape(distorted_image)
-            height = shape[0]
-            width = shape[1]
-            new_height, new_width = _largest_size_at_most(height, width, cfg.INPUT_SIZE)
-        else:
-            new_height = cfg.INPUT_SIZE
-            new_width = cfg.INPUT_SIZE
-
-        num_resize_cases = 1 if cfg.RESIZE_FAST else 4
-        distorted_image = apply_with_random_selector(
-            distorted_image,
-            lambda x, method: tf.image.resize_images(x, [new_height, new_width], method=method),
-            num_cases=num_resize_cases)
-
-        distorted_image = tf.image.pad_to_bounding_box(distorted_image, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
-
-        if add_summaries:
-            with tf.name_scope('summaries'):
-                tf.summary.image('cropped_resized_images',
-                             tf.expand_dims(distorted_image, 0))
-
-        # Randomly flip the image:
-        if cfg.DO_RANDOM_FLIP_LEFT_RIGHT:
-          r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
-          do_flip = tf.less(r, 0.5)
-          distorted_image = tf.cond(do_flip, lambda: tf.image.flip_left_right(distorted_image), lambda: tf.identity(distorted_image))
-
-        # TODO: Can this be changed so that we don't always distort the colors?
-        # Distort the colors
-        if cfg.DO_COLOR_DISTORTION > 0:
-            r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
-            do_color_distortion = tf.less(r, cfg.DO_COLOR_DISTORTION)
-            num_color_cases = 1 if cfg.COLOR_DISTORT_FAST else 4
-            distorted_color_image = apply_with_random_selector(
-              distorted_image,
-              lambda x, ordering: distort_color(x, ordering, fast_mode=cfg.COLOR_DISTORT_FAST),
-              num_cases=num_color_cases)
-            distorted_image = tf.cond(do_color_distortion, lambda: tf.identity(distorted_color_image), lambda: tf.identity(distorted_image))
-
-        distorted_image.set_shape([cfg.INPUT_SIZE, cfg.INPUT_SIZE, 3])
-
-        distorted_image = tf.identity(distorted_image, name='final_distorted_image')
-
-        # Add a summary
-        if add_summaries:
-            with tf.name_scope('summaries'):
-                tf.summary.image('final_distorted_images', tf.expand_dims(distorted_image, 0))
-
-        # Add the distorted image to the TensorArray
-        distorted_inputs = distorted_inputs.write(current_index, tf.expand_dims(distorted_image, 0))
-
-        return [original_image, bboxes, distorted_inputs, current_index + 1]
 
 def expand_bboxes(xmin, xmax, ymin, ymax, cfg):
     """
@@ -619,7 +449,7 @@ def get_distorted_inputs(original_image, bboxes, cfg, add_summaries):
     loop_vars = [original_image, bboxes, distorted_inputs, image_summaries, current_index]
     original_image, bboxes, distorted_inputs, image_summaries, current_index = tf.while_loop(
         cond=bbox_crop_loop_cond,
-        body=distorter.apply, #apply_distortions,
+        body=distorter.apply,
         loop_vars=loop_vars,
         parallel_iterations=4, back_prop=False, swap_memory=False
     )
@@ -627,8 +457,6 @@ def get_distorted_inputs(original_image, bboxes, cfg, add_summaries):
     distorted_inputs = distorted_inputs.concat()
 
     if add_summaries:
-        #tf.summary.image('final_distorted_images', tf.expand_dims(distorter.final_distorted_image, 0))
-
         tf.summary.image('original_images', image_summaries.read(0))
         tf.summary.image('images_with_random_crop', image_summaries.read(1))
         tf.summary.image('cropped_resized_images', image_summaries.read(2))
@@ -699,20 +527,22 @@ def create_visualization_batch(serialized_example, cfg, add_summaries, fetch_tex
     return [names, tensors]
 
 def create_classification_batch(serialized_example, cfg, add_summaries):
-    features = decode_serialized_example(serialized_example,
-                                            [('image/encoded', 'image'),
-                                             ('image/id', 'image_id')])
 
+    features = get_region_data(serialized_example, cfg, fetch_ids=True,
+                               fetch_labels=False, fetch_text_labels=False)
 
-    image = features['image']
-    image_id = features['image_id']
+    original_image = features['image']
+    bboxes = features['bboxes']
+    ids = features['ids']
 
-    distorted_image = apply_distortions(image, cfg, add_summaries=add_summaries)
+    distorted_inputs = get_distorted_inputs(original_image, bboxes, cfg, add_summaries)
 
-    distorted_image = tf.subtract(distorted_image, 0.5)
-    distorted_image = tf.multiply(distorted_image, 2.0)
+    distorted_inputs = tf.subtract(distorted_inputs, 0.5)
+    distorted_inputs = tf.multiply(distorted_inputs, 2.0)
 
-    return [('inputs', 'ids'), [distorted_image, image_id]]
+    names = ('inputs', 'ids')
+    tensors = [distorted_inputs, ids]
+    return [names, tensors]
 
 def input_nodes(tfrecords, cfg, num_epochs=None, batch_size=32, num_threads=2,
                 shuffle_batch = True, random_seed=1, capacity = 1000, min_after_dequeue = 96,

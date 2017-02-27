@@ -112,7 +112,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Visualize the inputs to train the classification system.')
 
     parser.add_argument('--tfrecords', dest='tfrecords',
-                        help='paths to tfrecords files that contain the training data', type=str,
+                        help='Paths to tfrecord files.', type=str,
                         nargs='+', required=True)
 
     parser.add_argument('--config', dest='config_file',
@@ -120,7 +120,7 @@ def parse_args():
                         required=True, type=str)
 
     parser.add_argument('--text_labels', dest='show_text_labels',
-                        help='Path to the configuration file',
+                        help='If text labels have been stored in the tfrecords, then you can use this flag to show them.',
                         action='store_true', default=False)
 
     args = parser.parse_args()
