@@ -14,7 +14,7 @@ SESSION_CONFIG : {
 # Metrics
 #
 # Top-k precision information. Each entry is a different k value.
-PRECISION_AT_K_METRIC : [3, 5]
+ACCURACY_AT_K_METRIC : [3, 5]
 
 # END: Metrics
 #################################################

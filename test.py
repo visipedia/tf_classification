@@ -70,9 +70,13 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         metric_map = {
             'Accuracy': tf.metrics.accuracy(labels=labels, predictions=tf.argmax(predictions, 1))
         }
-        if len(cfg.PRECISION_AT_K_METRIC) > 0:
-            for k in cfg.PRECISION_AT_K_METRIC:
-                metric_map['Precision_%s' % k] = tf.metrics.sparse_average_precision_at_k(labels=labels, predictions=predictions, k=k)
+        if len(cfg.ACCURACY_AT_K_METRIC) > 0:
+            bool_labels = tf.ones([cfg.BATCH_SIZE], dtype=tf.bool)
+            for k in cfg.ACCURACY_AT_K_METRIC:
+                if k <= 1 or k > cfg.NUM_CLASSES:
+                    continue
+                in_top_k = tf.nn.in_top_k(predictions=predictions, targets=labels, k=k)
+                metric_map['Accuracy_at_%s' % k] = tf.metrics.accuracy(labels=bool_labels, predictions=in_top_k)
 
         names_to_values, names_to_updates = slim.metrics.aggregate_metric_map(metric_map)
 
