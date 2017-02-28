@@ -219,7 +219,7 @@ class DistortedInputs():
         # Add a summary of the original data
         if add_summaries:
             new_height, new_width = _largest_size_at_most(image_height, image_width, cfg.INPUT_SIZE)
-            resized_original_image = tf.image.resize_bicubic(tf.expand_dims(image, 0), [new_height, new_width])
+            resized_original_image = tf.image.resize_bilinear(tf.expand_dims(image, 0), [new_height, new_width])
             resized_original_image = tf.squeeze(resized_original_image)
             resized_original_image = tf.image.pad_to_bounding_box(resized_original_image, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
             image_summaries = image_summaries.write(0, tf.expand_dims(resized_original_image, 0))
@@ -244,8 +244,12 @@ class DistortedInputs():
 
         # Add a summary
         if add_summaries:
-            image_with_distorted_box = tf.image.draw_bounding_boxes( tf.expand_dims(resized_original_image, 0), distorted_bbox)
-            image_summaries = image_summaries.write(1, image_with_distorted_box)
+            image_with_bbox = tf.image.draw_bounding_boxes(tf.expand_dims(image, 0), distorted_bbox)
+            new_height, new_width = _largest_size_at_most(image_height, image_width, cfg.INPUT_SIZE)
+            resized_image_with_bbox = tf.image.resize_bilinear(image_with_bbox, [new_height, new_width])
+            resized_image_with_bbox = tf.squeeze(resized_image_with_bbox)
+            resized_image_with_bbox = tf.image.pad_to_bounding_box(resized_image_with_bbox, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
+            image_summaries = image_summaries.write(1, tf.expand_dims(resized_image_with_bbox, 0))
 
         # Resize the distorted image to the correct dimensions for the network
         if cfg.MAINTAIN_ASPECT_RATIO:
@@ -457,10 +461,10 @@ def get_distorted_inputs(original_image, bboxes, cfg, add_summaries):
     distorted_inputs = distorted_inputs.concat()
 
     if add_summaries:
-        tf.summary.image('original_images', image_summaries.read(0))
-        tf.summary.image('images_with_random_crop', image_summaries.read(1))
-        tf.summary.image('cropped_resized_images', image_summaries.read(2))
-        tf.summary.image('final_distorted_images', image_summaries.read(3))
+        tf.summary.image('0.original_image', image_summaries.read(0))
+        tf.summary.image('1.image_with_random_crop', image_summaries.read(1))
+        tf.summary.image('2.cropped_resized_image', image_summaries.read(2))
+        tf.summary.image('3.final_distorted_image', image_summaries.read(3))
 
 
     return distorted_inputs
