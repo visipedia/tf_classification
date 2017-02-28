@@ -54,7 +54,8 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             )
 
             predictions = end_points['Predictions']
-            labels = tf.squeeze(batch_dict['labels'])
+            #labels = tf.squeeze(batch_dict['labels'])
+            labels = batch_dict['labels']
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
