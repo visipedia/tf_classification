@@ -239,11 +239,12 @@ class DistortedInputs():
                 )
         else:
             distorted_image = tf.identity(image)
+            distorted_bbox = tf.constant([[[0.0, 0.0, 1.0, 1.0]]]) # ymin, xmin, ymax, xmax
 
         distorted_image.set_shape([None, None, 3])
 
         # Add a summary
-        if add_summaries:
+        if add_summaries :
             image_with_bbox = tf.image.draw_bounding_boxes(tf.expand_dims(image, 0), distorted_bbox)
             new_height, new_width = _largest_size_at_most(image_height, image_width, cfg.INPUT_SIZE)
             resized_image_with_bbox = tf.image.resize_bilinear(image_with_bbox, [new_height, new_width])
