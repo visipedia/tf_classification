@@ -274,7 +274,7 @@ class DistortedInputs():
             image_summaries = image_summaries.write(2, tf.expand_dims(distorted_image, 0))
 
         # Randomly flip the image:
-        if cfg.DO_RANDOM_FLIP_LEFT_RIGHT:
+        if cfg.DO_RANDOM_FLIP_LEFT_RIGHT > 0:
           r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
           do_flip = tf.less(r, 0.5)
           distorted_image = tf.cond(do_flip, lambda: tf.image.flip_left_right(distorted_image), lambda: tf.identity(distorted_image))
@@ -456,7 +456,7 @@ def get_distorted_inputs(original_image, bboxes, cfg, add_summaries):
         cond=bbox_crop_loop_cond,
         body=distorter.apply,
         loop_vars=loop_vars,
-        parallel_iterations=4, back_prop=False, swap_memory=False
+        parallel_iterations=10, back_prop=False, swap_memory=False
     )
 
     distorted_inputs = distorted_inputs.concat()
