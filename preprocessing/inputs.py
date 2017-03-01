@@ -370,7 +370,7 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
             )
 
         # combine the bounding boxes
-        bboxes = tf.concat([xmin, ymin, xmax, ymax], 0)
+        bboxes = tf.concat(axis=[xmin, ymin, xmax, ymax], values=0)
         # order the bboxes so that they have the shape: [num_bboxes, bbox_coords]
         bboxes = tf.transpose(bboxes, [1, 0])
 
