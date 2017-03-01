@@ -6,14 +6,35 @@ import argparse
 import os
 
 import tensorflow as tf
-from tensorflow.contrib.session_bundle import exporter
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import graph_util
+from tensorflow.python.saved_model import builder as saved_model_builder
+from tensorflow.python.saved_model import signature_constants
+from tensorflow.python.saved_model import signature_def_utils
+from tensorflow.python.saved_model import tag_constants
+from tensorflow.python.saved_model import utils
 from tensorflow.python.tools import optimize_for_inference_lib
 slim = tf.contrib.slim
 
 from config.parse_config import parse_config_file
 from nets import nets_factory
+
+def preprocess_image(image_buffer, input_height, input_width):
+  """Preprocess JPEG encoded bytes to 3D float Tensor."""
+
+  # Decode the string as an RGB JPEG.
+  image = tf.image.decode_jpeg(image_buffer, channels=3)
+  image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+  # Resize the image to the original height and width.
+  image = tf.expand_dims(image, 0)
+  image = tf.image.resize_bilinear(image,
+                                   [input_height, input_width],
+                                   align_corners=False)
+  image = tf.squeeze(image, [0])
+  # Finally, rescale to [-1,1] instead of [0, 1)
+  image = tf.subtract(image, 0.5)
+  image = tf.multiply(image, 2.0)
+  return image
 
 def export(checkpoint_path, export_dir, export_version, export_for_serving, cfg):
 
@@ -89,6 +110,41 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, cfg)
                 placeholder_type_enum=dtypes.float32.as_datatype_enum)
 
             if export_for_serving:
+
+                classification_signature = signature_def_utils.build_signature_def(
+                    inputs={signature_constants.CLASSIFY_INPUTS: image_data},
+                    outputs={
+                        signature_constants.CLASSIFY_OUTPUT_CLASSES:
+                            classification_outputs_classes,
+                        signature_constants.CLASSIFY_OUTPUT_SCORES:
+                            classification_outputs_scores
+                    },
+                    method_name=signature_constants.CLASSIFY_METHOD_NAME
+                )
+
+                tensor_info_x = utils.build_tensor_info(x)
+                tensor_info_y = utils.build_tensor_info(y)
+
+                prediction_signature = signature_def_utils.build_signature_def(
+                    inputs={'images': tensor_info_x},
+                    outputs={'scores': tensor_info_y},
+                    method_name=signature_constants.PREDICT_METHOD_NAME
+                )
+
+                legacy_init_op = tf.group(tf.initialize_all_tables(), name='legacy_init_op')
+                builder.add_meta_graph_and_variables(
+                    sess, [tag_constants.SERVING],
+                    signature_def_map={
+                      'predict_images':
+                          prediction_signature,
+                      signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                          classification_signature,
+                    },
+                    legacy_init_op=legacy_init_op
+                )
+
+                builder.save()
+
                 export_saver = tf.train.Saver(sharded=True)
                 model_exporter = exporter.Exporter(export_saver)
                 signature = exporter.classification_signature(input_tensor=image_data, scores_tensor=class_scores, classes_tensor=predicted_classes)
