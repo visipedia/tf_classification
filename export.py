@@ -19,33 +19,56 @@ slim = tf.contrib.slim
 from config.parse_config import parse_config_file
 from nets import nets_factory
 
-def preprocess_image(image_buffer, input_height, input_width):
-  """Preprocess JPEG encoded bytes to 3D float Tensor."""
-
-  # Decode the string as an RGB JPEG.
-  image = tf.image.decode_jpeg(image_buffer, channels=3)
-  image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-  # Resize the image to the original height and width.
-  image = tf.expand_dims(image, 0)
-  image = tf.image.resize_bilinear(image,
-                                   [input_height, input_width],
-                                   align_corners=False)
-  image = tf.squeeze(image, [0])
-  # Finally, rescale to [-1,1] instead of [0, 1)
-  image = tf.subtract(image, 0.5)
-  image = tf.multiply(image, 2.0)
-  return image
-
-def export(checkpoint_path, export_dir, export_version, export_for_serving, cfg):
+def export(checkpoint_path, export_dir, export_version, export_for_serving, do_preprocess, cfg):
 
     graph = tf.Graph()
+
+    input_node_name = "images"
+    output_node_name = None
+    jpegs = None
 
     with graph.as_default():
 
         global_step = slim.get_or_create_global_step()
-        input_size = cfg.IMAGE_PROCESSING.INPUT_SIZE
-        image_data = tf.placeholder(tf.float32, [None, input_size * input_size * 3], name="images")
-        images = tf.reshape(image_data, [-1, input_size, input_size, 3])
+
+        input_height = cfg.IMAGE_PROCESSING.INPUT_SIZE
+        input_width = cfg.IMAGE_PROCESSING.INPUT_SIZE
+        input_depth = 3
+        # We want to store the preprocessing operation in the graph
+        if do_preprocess:
+
+            def preprocess_image(image_buffer):
+              """Preprocess JPEG encoded bytes to 3D float Tensor."""
+
+              # Decode the string as an RGB JPEG.
+              image = tf.image.decode_jpeg(image_buffer, channels=3)
+              image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+              # Resize the image to the original height and width.
+              image = tf.expand_dims(image, 0)
+              image = tf.image.resize_bilinear(image,
+                                               [input_height, input_width],
+                                               align_corners=False)
+              image = tf.squeeze(image, [0])
+              # Finally, rescale to [-1,1] instead of [0, 1)
+              image = tf.subtract(image, 0.5)
+              image = tf.multiply(image, 2.0)
+              return image
+
+            input_placeholder = tf.placeholder(tf.string, name=input_node_name)
+            feature_configs = {
+                'image/encoded': tf.FixedLenFeature(
+                    shape=[], dtype=tf.string),
+            }
+            tf_example = tf.parse_example(input_placeholder, feature_configs)
+
+            jpegs = tf_example['image/encoded']
+            encoded_jpeg_node_name = jpegs.name[:-2]
+            images = tf.map_fn(preprocess_image, jpegs, dtype=tf.float32)
+
+        # We assume the client has preprocessed the data for us
+        else:
+            input_placeholder = tf.placeholder(tf.float32, [None, input_height * input_width * input_depth], name=input_node_name)
+            images = tf.reshape(input_placeholder, [-1, input_height, input_width, input_depth])
 
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME]()
 
@@ -55,7 +78,8 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, cfg)
                 num_classes=cfg.NUM_CLASSES,
                 is_training=False
             )
-            class_scores, predicted_classes = tf.nn.top_k(end_points['Predictions'], k=cfg.NUM_CLASSES)
+
+        output_node_name = end_points['Predictions'].name[:-2]
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
@@ -93,8 +117,8 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, cfg)
             saver.restore(sess, checkpoint_path)
 
             input_graph_def = graph.as_graph_def()
-            input_node_names= ["images"]
-            output_node_names = [end_points['Predictions'].name[:-2]]
+            input_node_names= [input_node_name]
+            output_node_names = [output_node_name]
 
             constant_graph_def = graph_util.convert_variables_to_constants(
                 sess=sess,
@@ -103,61 +127,92 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, cfg)
                 variable_names_whitelist=None,
                 variable_names_blacklist=None)
 
-            optimized_graph_def = optimize_for_inference_lib.optimize_for_inference(
-                input_graph_def=constant_graph_def,
-                input_node_names=input_node_names,
-                output_node_names=output_node_names,
-                placeholder_type_enum=dtypes.float32.as_datatype_enum)
+            if do_preprocess:
+                optimized_graph_def = constant_graph_def
+            else:
+                optimized_graph_def = optimize_for_inference_lib.optimize_for_inference(
+                    input_graph_def=constant_graph_def,
+                    input_node_names=input_node_names,
+                    output_node_names=output_node_names,
+                    placeholder_type_enum=dtypes.float32.as_datatype_enum)
 
-            if export_for_serving:
+    if export_for_serving:
+
+        graph = tf.Graph()
+        with graph.as_default():
+
+            input_op, output_op = tf.import_graph_def(optimized_graph_def, return_elements=[input_node_name, output_node_name])
+            input_node = input_op.outputs[0]
+            output_node = output_op.outputs[0]
+            class_scores, predicted_classes = tf.nn.top_k(output_node, k=cfg.NUM_CLASSES)
+
+            with tf.Session(graph=graph) as sess:
+
+                save_path = os.path.join(export_dir, "%d" % (export_version,))
+
+                builder = saved_model_builder.SavedModelBuilder(save_path)
+
+                # Build the signature_def_map.
+
+                classify_inputs_tensor_info = utils.build_tensor_info(input_node)
+                classes_output_tensor_info = utils.build_tensor_info(predicted_classes)
+                scores_output_tensor_info = utils.build_tensor_info(class_scores)
 
                 classification_signature = signature_def_utils.build_signature_def(
-                    inputs={signature_constants.CLASSIFY_INPUTS: image_data},
+                    inputs={
+                        signature_constants.CLASSIFY_INPUTS: classify_inputs_tensor_info
+                    },
                     outputs={
                         signature_constants.CLASSIFY_OUTPUT_CLASSES:
-                            classification_outputs_classes,
+                            classes_output_tensor_info,
                         signature_constants.CLASSIFY_OUTPUT_SCORES:
-                            classification_outputs_scores
+                            scores_output_tensor_info
                     },
                     method_name=signature_constants.CLASSIFY_METHOD_NAME
                 )
 
-                tensor_info_x = utils.build_tensor_info(x)
-                tensor_info_y = utils.build_tensor_info(y)
+                if do_preprocess:
+                    predict_inputs_tensor_info = utils.build_tensor_info(jpegs)
+                else:
+                    predict_inputs_tensor_info = utils.build_tensor_info(input_node)
 
                 prediction_signature = signature_def_utils.build_signature_def(
-                    inputs={'images': tensor_info_x},
-                    outputs={'scores': tensor_info_y},
-                    method_name=signature_constants.PREDICT_METHOD_NAME
-                )
+                    inputs={'images': predict_inputs_tensor_info},
+                    outputs={
+                        'classes': classes_output_tensor_info,
+                        'scores': scores_output_tensor_info
+                },
+                method_name=signature_constants.PREDICT_METHOD_NAME)
 
-                legacy_init_op = tf.group(tf.initialize_all_tables(), name='legacy_init_op')
+                legacy_init_op = tf.group(
+                  tf.tables_initializer(), name='legacy_init_op')
+
                 builder.add_meta_graph_and_variables(
                     sess, [tag_constants.SERVING],
                     signature_def_map={
-                      'predict_images':
-                          prediction_signature,
-                      signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
-                          classification_signature,
+                        'predict_images':
+                            prediction_signature,
+                        signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                            classification_signature,
                     },
                     legacy_init_op=legacy_init_op
                 )
 
                 builder.save()
 
-                export_saver = tf.train.Saver(sharded=True)
-                model_exporter = exporter.Exporter(export_saver)
-                signature = exporter.classification_signature(input_tensor=image_data, scores_tensor=class_scores, classes_tensor=predicted_classes)
-                model_exporter.init(optimized_graph_def,
-                                  default_graph_signature=signature)
-                model_exporter.export(export_dir, tf.constant(export_version), sess)
+                print("Saved optimized model for TensorFlow Serving.")
 
-            else:
-                if not os.path.exists(export_dir):
-                    os.makedirs(export_dir)
-                save_path = os.path.join(export_dir, 'optimized_model-%d.pb' % (export_version,))
-                with open(save_path, 'w') as f:
-                    f.write(optimized_graph_def.SerializeToString())
+
+    else:
+        if not os.path.exists(export_dir):
+            os.makedirs(export_dir)
+        save_path = os.path.join(export_dir, 'optimized_model-%d.pb' % (export_version,))
+        with open(save_path, 'w') as f:
+            f.write(optimized_graph_def.SerializeToString())
+
+        print("Saved optimized model for mobile devices.")
+        print("Input node name: %s" % (input_node_name,))
+        print("Output node name: %s" % (output_node_name,))
 
 def parse_args():
 
@@ -183,6 +238,10 @@ def parse_args():
                         help='Export for TensorFlow Serving usage. Otherwise, a constant graph will be generated.',
                         action='store_true', default=False)
 
+    parser.add_argument('--do_preprocess', dest='do_preprocess',
+                        help='Add the image decoding and preprocessing nodes to the graph.',
+                        action='store_true', default=False)
+
 
     args = parser.parse_args()
 
@@ -193,4 +252,4 @@ if __name__ == '__main__':
     args = parse_args()
     cfg = parse_config_file(args.config_file)
 
-    export(args.checkpoint_path, args.export_dir, args.export_version, args.serving, cfg=cfg)
+    export(args.checkpoint_path, args.export_dir, args.export_version, args.serving, args.do_preprocess, cfg=cfg)
