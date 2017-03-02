@@ -211,11 +211,6 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         # Create a variable to count the number of train() calls.
         global_step = slim.get_or_create_global_step()
 
-        # Calculate the learning rate schedule.
-        lr = _configure_learning_rate(global_step, cfg)
-
-        # Create an optimizer that performs gradient descent.
-        optimizer = _configure_optimizer(lr, cfg)
 
         batch_dict = inputs.input_nodes(
             tfrecords=tfrecords,
@@ -233,8 +228,11 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
 
         batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
                                                        num_classes=cfg.NUM_CLASSES)
+        
+        batch_queue = slim.prefetch_queue.prefetch_queue(
+                          [batch_dict['inputs'], batched_one_hot_labels], capacity=2)
 
-        input_summaries = copy.copy(tf.get_collection(tf.GraphKeys.SUMMARIES))
+        summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME](
             weight_decay=cfg.WEIGHT_DECAY,
@@ -260,28 +258,42 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
                 logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=1.0)
 
         total_loss = tf.losses.get_total_loss()
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        
+        for loss in tf.get_collection(tf.GraphKeys.LOSSES):
+            summaries.add(tf.summary.scalar(name='losses/%s' % loss.op.name, tensor=loss))
 
-        # Track the moving averages of all trainable variables.
-        # At test time we'll restore all variables with the average value
-        # Note that we maintain a "double-average" of the BatchNormalization
-        # global statistics. This is more complicated then need be but we employ
-        # this for backward-compatibility with our previous models.
-        ema = tf.train.ExponentialMovingAverage(
-          decay=cfg.MOVING_AVERAGE_DECAY,
-          num_updates=global_step
-        )
-        variables_to_average = (slim.get_model_variables())
-        maintain_averages_op = ema.apply(variables_to_average)
-        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, maintain_averages_op)
+        if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0: 
+            moving_average_variables = slim.get_model_variables()
+            ema = tf.train.ExponentialMovingAverage(
+                decay=cfg.MOVING_AVERAGE_DECAY,
+                num_updates=global_step
+            )
+        else:
+            moving_average_variables, variable_averages = None, None
+        
+        
+        # Calculate the learning rate schedule.
+        lr = _configure_learning_rate(global_step, cfg)
+
+        # Create an optimizer that performs gradient descent.
+        optimizer = _configure_optimizer(lr, cfg)
+
+        summaries.add(tf.summary.scalar(tensor=lr,
+                                        name='learning_rate'))
+
+        update_ops.append(ema.apply(moving_average_variables))
 
         trainable_vars = get_trainable_variables(trainable_scopes)
-        train_op = slim.learning.create_train_op(total_loss, optimizer, variables_to_train=trainable_vars)
-
-        # Summary operations
-        summary_op = tf.summary.merge([
-          tf.summary.scalar('total_loss', total_loss),
-          tf.summary.scalar('learning_rate', lr)
-        ] + input_summaries)
+        train_op = slim.learning.create_train_op(total_loss=total_loss, 
+                                                 optimizer=optimizer, 
+                                                 global_step=global_step,
+                                                 update_ops=update_ops,
+                                                 variables_to_train=trainable_vars)
+        
+        # Merge all of the summaries
+        summaries |= set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+        summary_op = tf.summary.merge(inputs=list(summaries), name='summary_op')
 
         sess_config = tf.ConfigProto(
           log_device_placement=cfg.SESSION_CONFIG.LOG_DEVICE_PLACEMENT,
@@ -298,15 +310,17 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         )
 
         # Run training.
-        slim.learning.train(train_op, logdir,
-          init_fn=get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes),
-          number_of_steps=cfg.NUM_TRAIN_ITERATIONS,
-          save_summaries_secs=cfg.SAVE_SUMMARY_SECS,
-          save_interval_secs=cfg.SAVE_INTERVAL_SECS,
-          saver=saver,
-          session_config=sess_config,
-          summary_op = summary_op,
-          log_every_n_steps = cfg.LOG_EVERY_N_STEPS
+        slim.learning.train(
+            train_op=train_op, 
+            logdir=logdir,
+            init_fn=get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes),
+            number_of_steps=cfg.NUM_TRAIN_ITERATIONS,
+            save_summaries_secs=cfg.SAVE_SUMMARY_SECS,
+            save_interval_secs=cfg.SAVE_INTERVAL_SECS,
+            saver=saver,
+            session_config=sess_config,
+            summary_op = summary_op,
+            log_every_n_steps = cfg.LOG_EVERY_N_STEPS
         )
 
 def parse_args():
