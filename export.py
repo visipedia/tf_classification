@@ -79,7 +79,7 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
                 is_training=False
             )
 
-        output_node_name = end_points['Predictions'].name[:-2]
+        output_node_name = input_placeholder.name[:-2]
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
@@ -110,43 +110,21 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
             )
         sess = tf.Session(graph=graph, config=sess_config)
 
-        with sess.as_default():
-
-            tf.global_variables_initializer().run()
-
-            saver.restore(sess, checkpoint_path)
-
-            input_graph_def = graph.as_graph_def()
-            input_node_names= [input_node_name]
-            output_node_names = [output_node_name]
-
-            constant_graph_def = graph_util.convert_variables_to_constants(
-                sess=sess,
-                input_graph_def=input_graph_def,
-                output_node_names=output_node_names,
-                variable_names_whitelist=None,
-                variable_names_blacklist=None)
-
+        if export_for_serving:
+            
+            classification_input_node = input_placeholder
             if do_preprocess:
-                optimized_graph_def = constant_graph_def
+                prediction_input_node = jpegs
             else:
-                optimized_graph_def = optimize_for_inference_lib.optimize_for_inference(
-                    input_graph_def=constant_graph_def,
-                    input_node_names=input_node_names,
-                    output_node_names=output_node_names,
-                    placeholder_type_enum=dtypes.float32.as_datatype_enum)
+                prediction_input_node = classification_input_node
 
-    if export_for_serving:
-
-        graph = tf.Graph()
-        with graph.as_default():
-
-            input_op, output_op = tf.import_graph_def(optimized_graph_def, return_elements=[input_node_name, output_node_name])
-            input_node = input_op.outputs[0]
-            output_node = output_op.outputs[0]
-            class_scores, predicted_classes = tf.nn.top_k(output_node, k=cfg.NUM_CLASSES)
+            class_scores, predicted_classes = tf.nn.top_k(end_points['Predictions'], k=cfg.NUM_CLASSES)
 
             with tf.Session(graph=graph) as sess:
+
+                tf.global_variables_initializer().run()
+
+                saver.restore(sess, checkpoint_path)
 
                 save_path = os.path.join(export_dir, "%d" % (export_version,))
 
@@ -154,7 +132,7 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
 
                 # Build the signature_def_map.
 
-                classify_inputs_tensor_info = utils.build_tensor_info(input_node)
+                classify_inputs_tensor_info = utils.build_tensor_info(classification_input_node)
                 classes_output_tensor_info = utils.build_tensor_info(predicted_classes)
                 scores_output_tensor_info = utils.build_tensor_info(class_scores)
 
@@ -170,11 +148,8 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
                     },
                     method_name=signature_constants.CLASSIFY_METHOD_NAME
                 )
-
-                if do_preprocess:
-                    predict_inputs_tensor_info = utils.build_tensor_info(jpegs)
-                else:
-                    predict_inputs_tensor_info = utils.build_tensor_info(input_node)
+                
+                predict_inputs_tensor_info = utils.build_tensor_info(prediction_input_node)
 
                 prediction_signature = signature_def_utils.build_signature_def(
                     inputs={'images': predict_inputs_tensor_info},
@@ -203,16 +178,42 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
                 print("Saved optimized model for TensorFlow Serving.")
 
 
-    else:
-        if not os.path.exists(export_dir):
-            os.makedirs(export_dir)
-        save_path = os.path.join(export_dir, 'optimized_model-%d.pb' % (export_version,))
-        with open(save_path, 'w') as f:
-            f.write(optimized_graph_def.SerializeToString())
+        else:
+            with sess.as_default():
 
-        print("Saved optimized model for mobile devices.")
-        print("Input node name: %s" % (input_node_name,))
-        print("Output node name: %s" % (output_node_name,))
+                tf.global_variables_initializer().run()
+
+                saver.restore(sess, checkpoint_path)
+
+                input_graph_def = graph.as_graph_def()
+                input_node_names= [input_node_name]
+                output_node_names = [output_node_name]
+
+                constant_graph_def = graph_util.convert_variables_to_constants(
+                    sess=sess,
+                    input_graph_def=input_graph_def,
+                    output_node_names=output_node_names,
+                    variable_names_whitelist=None,
+                    variable_names_blacklist=None)
+
+                if do_preprocess:
+                    optimized_graph_def = constant_graph_def
+                else:
+                    optimized_graph_def = optimize_for_inference_lib.optimize_for_inference(
+                        input_graph_def=constant_graph_def,
+                        input_node_names=input_node_names,
+                        output_node_names=output_node_names,
+                        placeholder_type_enum=dtypes.float32.as_datatype_enum)
+                
+                if not os.path.exists(export_dir):
+                    os.makedirs(export_dir)
+                save_path = os.path.join(export_dir, 'optimized_model-%d.pb' % (export_version,))
+                with open(save_path, 'w') as f:
+                    f.write(optimized_graph_def.SerializeToString())
+
+                print("Saved optimized model for mobile devices at: %s." % (save_path,))
+                print("Input node name: %s" % (input_node_name,))
+                print("Output node name: %s" % (output_node_name,))
 
 def parse_args():
 
