@@ -22,7 +22,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         max_iterations (int)
         cfg (EasyDict)
     """
-    tf.logging.set_verbosity(tf.logging.DEBUG)
+    tf.logging.set_verbosity(tf.logging.INFO)
 
     graph = tf.Graph()
 
@@ -82,12 +82,15 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         names_to_values, names_to_updates = slim.metrics.aggregate_metric_map(metric_map)
 
         # Print the summaries to screen.
+        print_global_step = True
         for name, value in names_to_values.iteritems():
             summary_name = 'eval/%s' % name
             op = tf.summary.scalar(summary_name, value, collections=[])
+            if print_global_step:
+                op=tf.Print(op, [global_step], "Model Step ")
+                print_global_step = False
             op = tf.Print(op, [value], summary_name)
-            tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
-
+            tf.add_to_collection(tf.GraphKeys.SUMMARIES, op) 
 
         if max_iterations > 0:
             num_batches = max_iterations

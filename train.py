@@ -30,7 +30,7 @@ import tensorflow.contrib.slim as slim
 
 from config.parse_config import parse_config_file
 from nets import nets_factory
-from preprocessing import inputs
+from preprocessing.inputs import input_nodes
 
 
 def _configure_learning_rate(global_step, cfg):
@@ -201,7 +201,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         cfg (EasyDict)
         pretrained_model_path (str) : path to a pretrained Inception Network
     """
-    tf.logging.set_verbosity(tf.logging.DEBUG)
+    tf.logging.set_verbosity(tf.logging.INFO)
 
     graph = tf.Graph()
 
@@ -211,8 +211,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         # Create a variable to count the number of train() calls.
         global_step = slim.get_or_create_global_step()
 
-
-        batch_dict = inputs.input_nodes(
+        batch_dict = input_nodes(
             tfrecords=tfrecords,
             cfg=cfg.IMAGE_PROCESSING,
             num_epochs=None,
@@ -229,10 +228,10 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
                                                        num_classes=cfg.NUM_CLASSES)
         
-        batch_queue = slim.prefetch_queue.prefetch_queue(
-                          [batch_dict['inputs'], batched_one_hot_labels], capacity=2)
-
-        summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+        # GVH: Doesn't seem to help to the poor queueing performance...
+        # batch_queue = slim.prefetch_queue.prefetch_queue(
+        #                   [batch_dict['inputs'], batched_one_hot_labels], capacity=2)
+        # inputs, labels = batch_queue.dequeue()
 
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME](
             weight_decay=cfg.WEIGHT_DECAY,
@@ -257,11 +256,21 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
             tf.losses.softmax_cross_entropy(
                 logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=1.0)
 
-        total_loss = tf.losses.get_total_loss()
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         
+
+        summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+
+        # Summarize the losses
         for loss in tf.get_collection(tf.GraphKeys.LOSSES):
             summaries.add(tf.summary.scalar(name='losses/%s' % loss.op.name, tensor=loss))
+        
+        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        if regularization_losses:
+            regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
+            summaries.add(tf.summary.scalar(name='losses/regularization_loss', tensor=regularization_loss))
+
+        total_loss = tf.losses.get_total_loss()
+        summaries.add(tf.summary.scalar(name='losses/total_loss', tensor=total_loss))
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0: 
             moving_average_variables = slim.get_model_variables()
@@ -281,14 +290,14 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
 
         summaries.add(tf.summary.scalar(tensor=lr,
                                         name='learning_rate'))
-
-        update_ops.append(ema.apply(moving_average_variables))
+        
+        
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, ema.apply(moving_average_variables))
 
         trainable_vars = get_trainable_variables(trainable_scopes)
         train_op = slim.learning.create_train_op(total_loss=total_loss, 
                                                  optimizer=optimizer, 
                                                  global_step=global_step,
-                                                 update_ops=update_ops,
                                                  variables_to_train=trainable_vars)
         
         # Merge all of the summaries
