@@ -160,6 +160,8 @@ BATCHNORM_EPSILON : 0.001
 
 DROPOUT_KEEP_PROB : 0.8
 
+CLIP_GRADIENT_NORM : 2 # If 0, no clipping is performed. Otherwise acts as a threshold to clip the gradients.
+
 # End: Regularization
 #################################################
 # Optimization

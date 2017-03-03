@@ -184,7 +184,7 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes):
     else:
         checkpoint_path = pretrained_model_path
 
-    tf.logging.info('Fine-tuning from %s' % checkpoint_path)
+    tf.logging.info('Restoring variables from %s' % checkpoint_path)
 
     return slim.assign_from_checkpoint_fn(
         checkpoint_path,
@@ -298,7 +298,8 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         train_op = slim.learning.create_train_op(total_loss=total_loss, 
                                                  optimizer=optimizer, 
                                                  global_step=global_step,
-                                                 variables_to_train=trainable_vars)
+                                                 variables_to_train=trainable_vars,
+                                                 clip_gradient_norm=cfg.CLIP_GRADIENT_NORM)
         
         # Merge all of the summaries
         summaries |= set(tf.get_collection(tf.GraphKeys.SUMMARIES))
