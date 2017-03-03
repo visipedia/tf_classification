@@ -74,6 +74,10 @@ IMAGE_PROCESSING : {
         MAX_ATTEMPTS : 100, # maximum number of attempts before returning the whole region
     },
 
+    # Alternatively we can take a central crop from the image
+    DO_CENTRAL_CROP : 0, # Fraction of the time to take a central crop, 0 is never, 1 is always
+    CENTRAL_CROP_FRACTION : 0.875, # Between 0 and 1, fraction of size to crop
+
     # 3) We need to resize the extracted regions to feed into the network. 
     MAINTAIN_ASPECT_RATIO : false,
     # Avoid slower resize operations (bi-cubic, etc.)

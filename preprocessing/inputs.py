@@ -241,6 +241,14 @@ class DistortedInputs():
             distorted_image = tf.identity(image)
             distorted_bbox = tf.constant([[[0.0, 0.0, 1.0, 1.0]]]) # ymin, xmin, ymax, xmax
 
+        if cfg.DO_CENTRAL_CROP > 0:
+            r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
+            do_crop = tf.less(r, cfg.DO_CENTRAL_CROP)
+            distorted_image = tf.cond(do_crop, 
+                lambda: tf.image.central_crop(distorted_image, cfg.CENTRAL_CROP_FRACTION),
+                lambda: tf.identity(distorted_image)
+            )
+        
         distorted_image.set_shape([None, None, 3])
 
         # Add a summary
