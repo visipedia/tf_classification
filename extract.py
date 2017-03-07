@@ -74,12 +74,12 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
         feature_stores = []
         for feature_key in feature_keys:
             feature = tf.reshape(end_points[feature_key], [cfg.BATCH_SIZE, -1])
-            num_elements = tf.shape(feature)[1]
+            num_elements = feature.get_shape().as_list()[1]
             feature_stores.append(np.empty([num_items, num_elements], dtype=np.float32))
             fetches.append(feature)
         
         fetches.append(batch_dict['ids'])
-        feature_stores.append(np.empty(num_images, dtype=np.object))
+        feature_stores.append(np.empty(num_items, dtype=np.object))
 
         if os.path.isdir(checkpoint_path):
             checkpoint_dir = checkpoint_path
@@ -134,7 +134,7 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
                     step += 1
                     print(print_str % (step, (dt / cfg.BATCH_SIZE) * 1000))
 
-                    if max_iterations > 0 and step == max_iterations:
+                    if num_iterations > 0 and step == num_iterations:
                         break
 
             except tf.errors.OutOfRangeError as e:
