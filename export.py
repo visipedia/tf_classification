@@ -78,8 +78,9 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
                 num_classes=cfg.NUM_CLASSES,
                 is_training=False
             )
-
-        output_node_name = input_placeholder.name[:-2]
+        
+        output_node = tf.identity(end_points['Predictions'], name='Predictions')
+        output_node_name = output_node.op.name
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
