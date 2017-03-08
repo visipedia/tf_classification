@@ -79,7 +79,10 @@ def export(checkpoint_path, export_dir, export_version, export_for_serving, do_p
                 is_training=False
             )
         
-        output_node = tf.identity(end_points['Predictions'], name='Predictions')
+        # GVH: I would like to use tf.identity here, but the function tensorflow.python.framework.graph_util.remove_training_nodes 
+        # called in (optimize_for_inference_lib.optimize_for_inference) removes the identity function.
+        # Sticking with an add 0 operation for now. 
+        output_node = tf.add(end_points['Predictions'], 0., name='Predictions')
         output_node_name = output_node.op.name
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
