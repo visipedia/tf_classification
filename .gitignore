@@ -90,3 +90,6 @@ ENV/
 
 # Mac stuff
 .DS_Store
+
+# Visual Studio Code stuff
+.vscode/
