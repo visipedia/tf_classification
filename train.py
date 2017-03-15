@@ -137,7 +137,7 @@ def get_trainable_variables(trainable_scopes):
     return variables_to_train
 
 
-def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes):
+def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes, restore_variables_with_moving_averages=False, restore_moving_averages=False, ema=None):
     """
     Args:
         logdir : location of where we will be storing checkpoint files.
@@ -174,7 +174,10 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes):
             break
         if not excluded:
           variables_to_restore.append(var)
-
+    
+    #for variable in variables_to_restore:
+    #    print(variable.name)
+    
     if os.path.isdir(pretrained_model_path):
         checkpoint_path = tf.train.latest_checkpoint(pretrained_model_path)
         if checkpoint_path is None:
@@ -186,13 +189,66 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes):
 
     tf.logging.info('Restoring variables from %s' % checkpoint_path)
 
+    if ema != None:
+        # # Restore each variable with its moving average value
+        # if restore_variables_with_moving_averages: 
+            
+        #     # Also restore the moving average variables
+        #     if restore_moving_averages:
+        #         variables_to_restore_with_ma = variables_to_restore + [ema.average(var) for var in variables_to_restore]
+        #         normal_saver = tf.train.Saver(variables_to_restore_with_ma, reshape=False)
+        #     else:
+        #         normal_saver = tf.train.Saver(variables_to_restore, reshape=False)
+        #     ema_saver = tf.train.Saver({
+        #         ema.average_name(var) : ema.average(var)
+        #         for var in variables_to_restore
+        #     }, reshape=False)
+            
+        #     def callback(session):
+        #         normal_saver.restore(session, checkpoint_path)
+        #         ema_saver.restore(session, checkpoint_path)
+        #     return callback
+        
+        # elif restore_moving_averages:
+        #     variables_to_restore += [ema.average(var) for var in variables_to_restore]
+
+        # Load in the moving average value for a variable, rather than the variable itself
+        if restore_variables_with_moving_averages:
+
+            variables_to_restore = {
+                ema.average_name(var) : var
+                for var in variables_to_restore
+            }
+        
+        # Do we want to restore the moving average variables? Otherwise they will be reinitialized
+        if restore_moving_averages:
+            
+            # If we are already using the moving averages to restore the variables, then we will need 
+            # two Saver() objects (since the names in the dictionaries will clash)
+            if restore_variables_with_moving_averages:
+
+                normal_saver = tf.train.Saver(variables_to_restore, reshape=False)
+                ema_saver = tf.train.Saver({
+                    ema.average_name(var) : ema.average(var)
+                    for var in variables_to_restore.values()
+                }, reshape=False)
+                
+                def callback(session):
+                    normal_saver.restore(session, checkpoint_path)
+                    ema_saver.restore(session, checkpoint_path)
+                return callback
+        
+            else:
+                # GVH: Need to check for dict
+                variables_to_restore += [ema.average(var) for var in variables_to_restore]
+
     return slim.assign_from_checkpoint_fn(
         checkpoint_path,
         variables_to_restore,
         ignore_missing_vars=False)
 
 
-def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=None, checkpoint_exclude_scopes=None):
+def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=None, checkpoint_exclude_scopes=None, restore_variables_with_moving_averages=False, restore_moving_averages=False):
     """
     Args:
         tfrecords (list)
@@ -272,6 +328,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         total_loss = tf.losses.get_total_loss()
         summaries.add(tf.summary.scalar(name='losses/total_loss', tensor=total_loss))
 
+        ema = None
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0: 
             moving_average_variables = slim.get_model_variables()
             ema = tf.train.ExponentialMovingAverage(
@@ -323,7 +380,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         slim.learning.train(
             train_op=train_op, 
             logdir=logdir,
-            init_fn=get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes),
+            init_fn=get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes, restore_variables_with_moving_averages=restore_variables_with_moving_averages, restore_moving_averages=restore_moving_averages, ema=ema),
             number_of_steps=cfg.NUM_TRAIN_ITERATIONS,
             save_summaries_secs=cfg.SAVE_SUMMARY_SECS,
             save_interval_secs=cfg.SAVE_INTERVAL_SECS,
@@ -380,6 +437,14 @@ def parse_args():
     parser.add_argument('--model_name', dest='model_name',
                         help='The name of the architecture to use.',
                         required=False, type=str, default=None)
+    
+    parser.add_argument('--restore_variables_with_moving_averages', dest='restore_variables_with_moving_averages',
+                        help='If True, then we restore variables with their moving average values.',
+                        required=False, action='store_true', default=False)
+    
+    parser.add_argument('--restore_moving_averages', dest='restore_moving_averages',
+                        help='If True, then we restore the variable that tracks the moving average of each trainable varibale.',
+                        required=False, action='store_true', default=False)
 
     args = parser.parse_args()
     return args
@@ -411,7 +476,9 @@ def main():
         cfg=cfg,
         pretrained_model_path=args.pretrained_model,
         trainable_scopes = args.trainable_scopes,
-        checkpoint_exclude_scopes = args.checkpoint_exclude_scopes
+        checkpoint_exclude_scopes = args.checkpoint_exclude_scopes,
+        restore_variables_with_moving_averages=args.restore_variables_with_moving_averages, 
+        restore_moving_averages=args.restore_moving_averages
     )
 
 if __name__ == '__main__':
