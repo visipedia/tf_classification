@@ -267,22 +267,23 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         # Create a variable to count the number of train() calls.
         global_step = slim.get_or_create_global_step()
 
-        batch_dict = input_nodes(
-            tfrecords=tfrecords,
-            cfg=cfg.IMAGE_PROCESSING,
-            num_epochs=None,
-            batch_size=cfg.BATCH_SIZE,
-            num_threads=cfg.NUM_INPUT_THREADS,
-            shuffle_batch =cfg.SHUFFLE_QUEUE,
-            random_seed=cfg.RANDOM_SEED,
-            capacity=cfg.QUEUE_CAPACITY,
-            min_after_dequeue=cfg.QUEUE_MIN,
-            add_summaries=True,
-            input_type='train'
-        )
+        with tf.device('/cpu:0'):
+            batch_dict = input_nodes(
+                tfrecords=tfrecords,
+                cfg=cfg.IMAGE_PROCESSING,
+                num_epochs=None,
+                batch_size=cfg.BATCH_SIZE,
+                num_threads=cfg.NUM_INPUT_THREADS,
+                shuffle_batch =cfg.SHUFFLE_QUEUE,
+                random_seed=cfg.RANDOM_SEED,
+                capacity=cfg.QUEUE_CAPACITY,
+                min_after_dequeue=cfg.QUEUE_MIN,
+                add_summaries=True,
+                input_type='train'
+            )
 
-        batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
-                                                       num_classes=cfg.NUM_CLASSES)
+            batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
+                                                        num_classes=cfg.NUM_CLASSES)
         
         # GVH: Doesn't seem to help to the poor queueing performance...
         # batch_queue = slim.prefetch_queue.prefetch_queue(
