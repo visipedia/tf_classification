@@ -20,20 +20,21 @@ def visualize_train_inputs(tfrecords, cfg, show_text_labels=False):
     with sess.as_default(), graph.as_default():
 
         # Input Nodes
-        batch_dict = input_nodes(
-          tfrecords=tfrecords,
-          cfg=cfg.IMAGE_PROCESSING,
-          num_epochs=1,
-          batch_size=cfg.BATCH_SIZE,
-          num_threads=cfg.NUM_INPUT_THREADS,
-          shuffle_batch =cfg.SHUFFLE_QUEUE,
-          random_seed=cfg.RANDOM_SEED,
-          capacity=cfg.QUEUE_CAPACITY,
-          min_after_dequeue=cfg.QUEUE_MIN,
-          add_summaries=False,
-          input_type='visualize',
-          fetch_text_labels=show_text_labels
-        )
+        with tf.device('/cpu:0'):
+            batch_dict = input_nodes(
+                tfrecords=tfrecords,
+                cfg=cfg.IMAGE_PROCESSING,
+                num_epochs=1,
+                batch_size=cfg.BATCH_SIZE,
+                num_threads=cfg.NUM_INPUT_THREADS,
+                shuffle_batch =cfg.SHUFFLE_QUEUE,
+                random_seed=cfg.RANDOM_SEED,
+                capacity=cfg.QUEUE_CAPACITY,
+                min_after_dequeue=cfg.QUEUE_MIN,
+                add_summaries=False,
+                input_type='visualize',
+                fetch_text_labels=show_text_labels
+            )
 
         # Convert float images to uint8 images
         image_to_convert = tf.placeholder(dtype=tf.float32,

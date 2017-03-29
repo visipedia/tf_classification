@@ -30,19 +30,20 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
 
         global_step = slim.get_or_create_global_step()
 
-        batch_dict = inputs.input_nodes(
-            tfrecords=tfrecords,
-            cfg=cfg.IMAGE_PROCESSING,
-            num_epochs=1,
-            batch_size=cfg.BATCH_SIZE,
-            num_threads=cfg.NUM_INPUT_THREADS,
-            shuffle_batch =cfg.SHUFFLE_QUEUE,
-            random_seed=cfg.RANDOM_SEED,
-            capacity=cfg.QUEUE_CAPACITY,
-            min_after_dequeue=cfg.QUEUE_MIN,
-            add_summaries=False,
-            input_type='test'
-        )
+        with tf.device('/cpu:0'):
+            batch_dict = inputs.input_nodes(
+                tfrecords=tfrecords,
+                cfg=cfg.IMAGE_PROCESSING,
+                num_epochs=1,
+                batch_size=cfg.BATCH_SIZE,
+                num_threads=cfg.NUM_INPUT_THREADS,
+                shuffle_batch =cfg.SHUFFLE_QUEUE,
+                random_seed=cfg.RANDOM_SEED,
+                capacity=cfg.QUEUE_CAPACITY,
+                min_after_dequeue=cfg.QUEUE_MIN,
+                add_summaries=False,
+                input_type='test'
+            )
 
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME]()
 
