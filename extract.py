@@ -62,9 +62,11 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
                 cfg.MOVING_AVERAGE_DECAY, global_step)
             variables_to_restore = variable_averages.variables_to_restore(
                 slim.get_model_variables())
+            variables_to_restore[global_step.op.name] = global_step
         else:
             variables_to_restore = slim.get_variables_to_restore()
-        variables_to_restore[global_step.op.name] = global_step
+            variables_to_restore.append(global_step)
+        
 
         saver = tf.train.Saver(variables_to_restore, reshape=True)
 
