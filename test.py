@@ -45,6 +45,9 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
                 input_type='test'
             )
 
+            batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
+                                                        num_classes=cfg.NUM_CLASSES)
+
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME]()
 
         with slim.arg_scope(arg_scope):
@@ -57,6 +60,14 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             predictions = end_points['Predictions']
             #labels = tf.squeeze(batch_dict['labels'])
             labels = batch_dict['labels']
+
+            # Add the loss summary
+            loss = tf.losses.softmax_cross_entropy(
+                logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=1.0)
+            summary_name = 'eval/loss'
+            op = tf.summary.scalar(summary_name, loss, collections=[])
+            op = tf.Print(op, [loss], summary_name)
+            tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
