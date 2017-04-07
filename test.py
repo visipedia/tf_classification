@@ -77,7 +77,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         # Define the metrics:
         metric_map = {
             'Accuracy': slim.metrics.streaming_accuracy(labels=labels, predictions=tf.argmax(predictions, 1)),
-            'Loss' : slim.metrics.streaming_mean(loss)
+            loss.op.name : slim.metrics.streaming_mean(loss)
         }
         if len(cfg.ACCURACY_AT_K_METRIC) > 0:
             bool_labels = tf.ones([cfg.BATCH_SIZE], dtype=tf.bool)
