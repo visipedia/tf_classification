@@ -22,7 +22,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         max_iterations (int)
         cfg (EasyDict)
     """
-    tf.logging.set_verbosity(tf.logging.INFO)
+    tf.logging.set_verbosity(tf.logging.DEBUG)
 
     graph = tf.Graph()
 
@@ -64,10 +64,6 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             # Add the loss summary
             loss = tf.losses.softmax_cross_entropy(
                 logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=1.0)
-            summary_name = 'eval/loss'
-            op = tf.summary.scalar(summary_name, loss, collections=[])
-            op = tf.Print(op, [loss], summary_name)
-            tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
@@ -78,10 +74,10 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             variables_to_restore = slim.get_variables_to_restore()
         variables_to_restore[global_step.op.name] = global_step
 
-
         # Define the metrics:
         metric_map = {
-            'Accuracy': slim.metrics.streaming_accuracy(labels=labels, predictions=tf.argmax(predictions, 1))
+            'Accuracy': slim.metrics.streaming_accuracy(labels=labels, predictions=tf.argmax(predictions, 1)),
+            'Loss' : slim.metrics.streaming_mean(loss)
         }
         if len(cfg.ACCURACY_AT_K_METRIC) > 0:
             bool_labels = tf.ones([cfg.BATCH_SIZE], dtype=tf.bool)
