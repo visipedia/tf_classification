@@ -70,9 +70,11 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
                 cfg.MOVING_AVERAGE_DECAY, global_step)
             variables_to_restore = variable_averages.variables_to_restore(
                 slim.get_model_variables())
+            variables_to_restore[global_step.op.name] = global_step
         else:
             variables_to_restore = slim.get_variables_to_restore()
-        variables_to_restore[global_step.op.name] = global_step
+            variables_to_restore.append(global_step)
+        
 
         # Define the metrics:
         metric_map = {
