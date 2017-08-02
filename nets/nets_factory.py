@@ -22,6 +22,7 @@ import functools
 import tensorflow as tf
 
 from nets import inception
+from nets import mobilenet_v1
 
 slim = tf.contrib.slim
 
@@ -30,15 +31,22 @@ networks_map = {
                 'inception_v2': inception.inception_v2,
                 'inception_v3': inception.inception_v3,
                 'inception_v4': inception.inception_v4,
-                'inception_resnet_v2': inception.inception_resnet_v2
+                'inception_resnet_v2': inception.inception_resnet_v2,
+                'mobilenet_v1': mobilenet_v1.mobilenet_v1,
+                'mobilenet_v1_075': mobilenet_v1.mobilenet_v1_075,
+                'mobilenet_v1_050': mobilenet_v1.mobilenet_v1_050,
+                'mobilenet_v1_025': mobilenet_v1.mobilenet_v1_025,
                }
 
 arg_scopes_map = {'inception_v1': inception.inception_v3_arg_scope,
                   'inception_v2': inception.inception_v3_arg_scope,
                   'inception_v3': inception.inception_v3_arg_scope,
                   'inception_v4': inception.inception_v4_arg_scope,
-                  'inception_resnet_v2':
-                  inception.inception_resnet_v2_arg_scope
+                  'inception_resnet_v2': inception.inception_resnet_v2_arg_scope,
+                  'mobilenet_v1': mobilenet_v1.mobilenet_v1_arg_scope,
+                  'mobilenet_v1_075': mobilenet_v1.mobilenet_v1_arg_scope,
+                  'mobilenet_v1_050': mobilenet_v1.mobilenet_v1_arg_scope,
+                  'mobilenet_v1_025': mobilenet_v1.mobilenet_v1_arg_scope,
                  }
 
 
