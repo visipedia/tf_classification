@@ -79,7 +79,7 @@ sudo apt-get update && sudo apt-get install tensorflow-model-server
 ```
 You can also install from [source](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/setup.md#installation).
 
-Create a directory a models directory, such as `/home/ubuntu/serving/models`, and copy your `1` directory (that was created with the export.py script) to this directory. Alternatively, you can just specify `/home/ubuntu/serving/models` as your `--export_dir` when calling the export.py script.
+Create a models directory, such as `/home/ubuntu/serving/models`, and copy your `1` directory (that was created with the export.py script) to this directory. Alternatively, you can just specify `/home/ubuntu/serving/models` as your `--export_dir` when calling the export.py script.
 
 Now you can start the server:
 ```
