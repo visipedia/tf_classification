@@ -1,3 +1,27 @@
+"""
+Export a trained model for application use.
+
+Example for use with TensorFlow Serving:
+python export.py \
+--checkpoint_path model.ckpt-399739 \
+--export_dir export \
+--export_version 1 \
+--config config_export.yaml \
+--serving \
+--add_preprocess \
+--class_names class-codes.txt
+
+Example for use with TensorFlow Mobile:
+python export.py \
+--checkpoint_path model.ckpt-399739 \
+--export_dir export \
+--export_version 1 \
+--config config_export.yaml \
+--class_names class-codes.txt
+
+Author: Grant Van Horn
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
