@@ -87,7 +87,7 @@ tensorflow_model_server --port=9000 --model_name=inception --model_base_path=/ho
 ```
 Note the `--model_name` field, the client will need to know this when querying the server. 
 
-# Client Machine
+## Client Machine
 To query the server from a client machine you'll need to install the `tensorflow-serving-api` PIP package along with the `tensorflow` package. I use `numpy` for some operations so I'll install that too:
 ```
 pip install numpy tensorflow tensorflow-serving-api
