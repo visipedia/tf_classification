@@ -321,7 +321,7 @@ def parse_args():
                         action='store_true', default=False)
 
     parser.add_argument('--class_names', dest='class_names_path',
-                          help='Path to the class names corresponding to each entry in the predictions output.',
+                          help='Path to the class names corresponding to each entry in the predictions output. This file should have one line for each index.',
                           required=False, type=str, default=None)
 
     args = parser.parse_args()

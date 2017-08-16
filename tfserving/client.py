@@ -3,7 +3,7 @@ A simple client to query a TensorFlow Serving instance.
 
 Example:
 $ python client.py \
---images /Users/GVH/Desktop/IMG_0898_sm.jpg /Users/GVH/Desktop/IMG_0932_sm.jpeg \
+--images IMG_0932_sm.jpg \
 --num_results 10 \
 --model_name inception \
 --host localhost \
