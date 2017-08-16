@@ -3,7 +3,7 @@
 This directory contains utility code for interacting with a [TensorFlow Serving](https://www.tensorflow.org/serving/) instance. I'll walk through the basic steps of using TensorFlow Serving below.
 
 ## Export a Trained Model
-When your training process has finished you will be left with a training checkpoint file created by the [tf.train.Saver](https://www.tensorflow.org/api_docs/python/tf/train/Saver) class. We need to convert this checkpoint file for use with TensorFlow Serving. You'll need to create a yaml configuration file for the export (that species the . An example:
+When your training process has finished you will be left with a training checkpoint file created by the [tf.train.Saver](https://www.tensorflow.org/api_docs/python/tf/train/Saver) class. We need to convert this checkpoint file for use with TensorFlow Serving. You'll need to create a yaml configuration file for the export (essentially specifying the number of classes, input size, and a few other things). An example:
 
 ```yaml
 # Export specific configuration
@@ -59,12 +59,17 @@ python export.py \
 --add_preprocess \
 --class_names class-codes.txt
 ```
-We've passed in identifiers for the classes using the `--class_names` argument. This will allow clients to receive semantically meaningful identifiers for the prediction results. The class-codes.txt file contains one identifier per line, with each line corresponding to one index in the scores array. 
-
-This will create a directory called `1` in the `export_dir` directory and will contain the files that TensorFlow Serving requires. 
+This will create a directory called `1` in the `export_dir` directory and will contain the files that TensorFlow Serving requires. We've passed in semantic identifiers for the classes using the `--class_names` argument. This will allow clients to receive semantically meaningful identifiers along with the prediction results. This removes the requirement of clients having to map from score indices to identifiers themselves. The class-codes.txt file contains one identifier per line, with each line corresponding to one index in the scores array. For example:
+```txt
+car
+pedestrian
+light post
+trash can
+bench
+```
 
 ## Server Machine
-Spin up an Ubuntu 16.04 instance on your favorite cloud provider, or use your personal machine. You'll need to add the TensorFlow Serving distribution URI as a package source prior to installing:
+Spin up an Ubuntu 16.04 instance on your favorite cloud provider, or use your personal machine. You'll need to add the TensorFlow Serving distribution URI as a package source prior to installing (notes [here](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/setup.md#installing-using-apt-get)):
 ```
 echo "deb [arch=amd64] http://storage.googleapis.com/tensorflow-serving-apt stable tensorflow-model-server tensorflow-model-server-universal" | sudo tee /etc/apt/sources.list.d/tensorflow-serving.list
 
@@ -74,13 +79,16 @@ sudo apt-get update && sudo apt-get install tensorflow-model-server
 ```
 You can also install from [source](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/setup.md#installation).
 
+Create a directory a models directory, such as `/home/ubuntu/serving/models`, and copy your `1` directory (that was created with the export.py script) to this directory. Alternatively, you can just specify `/home/ubuntu/serving/models` as your `--export_dir` when calling the export.py script.
+
 Now you can start the server:
 ```
 tensorflow_model_server --port=9000 --model_name=inception --model_base_path=/home/ubuntu/serving/models
 ```
+Note the `--model_name` field, the client will need to know this when querying the server. 
 
 # Client Machine
-To query the server from a client machine you'll need to install the `tensorflow-serving-api` PIP package along with tensorflow. I use numpy for some operations so I'll install that too:
+To query the server from a client machine you'll need to install the `tensorflow-serving-api` PIP package along with the `tensorflow` package. I use `numpy` for some operations so I'll install that too:
 ```
 pip install numpy tensorflow tensorflow-serving-api
 ```
