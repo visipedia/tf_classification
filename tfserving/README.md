@@ -85,7 +85,7 @@ To query the server from a client machine you'll need to install the `tensorflow
 pip install numpy tensorflow tensorflow-serving-api
 ```
 
-We can now query the server using the [client.py](tfserving/client.py) file:
+We can now query the server using the [client.py](client.py) file:
 ```
 python client.py \
 --images IMG_0932_sm.jpg \
