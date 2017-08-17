@@ -16,7 +16,7 @@ SESSION_CONFIG : {
 # The number of classes we are classifying
 NUM_CLASSES : 200
 
-# Number of training examples in the tfrecords. This is needed to compute the number of 
+# Number of training examples in the tfrecords. This is needed to compute the number of
 # batches in an epoch
 NUM_TRAIN_EXAMPLES : 5994
 
@@ -26,12 +26,12 @@ NUM_TRAIN_ITERATIONS : 20000
 # The number of images to pass through the network in a single iteration
 BATCH_SIZE : 32
 
-# Which model architecture to use. 
+# Which model architecture to use.
 MODEL_NAME : 'inception_v3'
 
 # END: Dataset Info
 #################################################
-# Image Processing and Augmentation 
+# Image Processing and Augmentation
 # There are 5 steps to image processing:
 # 1) Extract regions from the image
 # 2) Extract a crops from each region
@@ -75,7 +75,7 @@ IMAGE_PROCESSING : {
     DO_CENTRAL_CROP : 0, # Fraction of the time to take a central crop, 0 is never, 1 is always
     CENTRAL_CROP_FRACTION : 0.875, # Between 0 and 1, fraction of size to crop
 
-    # 3) We need to resize the extracted regions to feed into the network. 
+    # 3) We need to resize the extracted regions to feed into the network.
     MAINTAIN_ASPECT_RATIO : false,
     # Avoid slower resize operations (bi-cubic, etc.)
     RESIZE_FAST : false,
@@ -86,7 +86,7 @@ IMAGE_PROCESSING : {
 
     # 5) We can distort the colors of the regions
     # The fraction of time to distort the color, 0 is never, 1 is always
-    DO_COLOR_DISTORTION : 0.3, 
+    DO_COLOR_DISTORTION : 0.3,
     # Avoids slower ops (random_hue and random_contrast)
     COLOR_DISTORT_FAST : false
 }
@@ -97,7 +97,7 @@ IMAGE_PROCESSING : {
 #
 # Number of threads to populate the batch queue
 NUM_INPUT_THREADS : 4
-# Should the data be shuffled? 
+# Should the data be shuffled?
 SHUFFLE_QUEUE : true
 # Capacity of the queue producing batched examples
 QUEUE_CAPACITY : 1000
@@ -117,7 +117,7 @@ SAVE_INTERVAL_SECS : 1800
 # The maximum number of recent checkpoint files to keep.
 MAX_TO_KEEP : 3
 
-# In addition to keeping the most recent `max_to_keep` checkpoint files, 
+# In addition to keeping the most recent `max_to_keep` checkpoint files,
 # you might want to keep one checkpoint file for every N hours of training
 # The default value of 10,000 hours effectively disables the feature.
 KEEP_CHECKPOINT_EVERY_N_HOURS : 10000
@@ -133,7 +133,7 @@ LEARNING_RATE_DECAY_TYPE : 'exponential' # One of "fixed", "exponential", or "po
 INITIAL_LEARNING_RATE : 0.01
 
 # The minimal end learning rate used by a polynomial decay learning rate.
-END_LEARNING_RATE : 0.0001 
+END_LEARNING_RATE : 0.0001
 
 # The amount of label smoothing.
 LABEL_SMOOTHING : 0.0
@@ -147,13 +147,13 @@ LEARNING_RATE_STAIRCASE : true
 
 # END: Learning Rate Parameters
 #################################################
-# Regularization 
+# Regularization
 #
 # The decay to use for the moving average. If 0, then moving average is not computed
 MOVING_AVERAGE_DECAY : 0.9999
 
 # The weight decay on the model weights
-WEIGHT_DECAY : 0.00004 
+WEIGHT_DECAY : 0.00004
 
 BATCHNORM_MOVING_AVERAGE_DECAY : 0.9997
 BATCHNORM_EPSILON : 0.001
@@ -167,7 +167,7 @@ CLIP_GRADIENT_NORM : 2 # If 0, no clipping is performed. Otherwise acts as a thr
 # Optimization
 #
 # The name of the optimizer, one of "adadelta", "adagrad", "adam", "ftrl", "momentum", "sgd" or "rmsprop"
-OPTIMIZER : 'rmsprop' 
+OPTIMIZER : 'rmsprop'
 OPTIMIZER_EPSILON : 1.0
 
 # The decay rate for adadelta.
@@ -191,10 +191,10 @@ FTRL_L1 : 0.0
 FTRL_L2 : 0.0
 
 # The momentum for the MomentumOptimizer and RMSPropOptimizer
-MOMENTUM : 0.0
+MOMENTUM : 0.9
 
 # Decay term for RMSProp.
-RMSPROP_DECAY : 0.9 
+RMSPROP_DECAY : 0.9
 
-# END: Optimization 
+# END: Optimization
 #################################################
