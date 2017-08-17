@@ -104,3 +104,21 @@ python client.py \
 --timeout 10
 ```
 This command will send the `IMG_0932_sm.jpg` file to the TensorFlow Serving instance at `localhost:9000` and print the top 10 class predictions. 
+
+Rather than sending the raw image bytes to the TensorFlow Serving instance, we can send the prepared image array. This image array will be fed directly into the network, so it must be the proper size and have had any transformations already applied. The [inputs.py](inputs.py) file has a convenience function to prepare an image for inception style networks. For example:
+```python
+from scipy.misc import imread
+
+import inputs
+import tfserver
+
+image = imread('IMG_0898.jpg')
+
+preped_image = inputs.prepare_image(image)
+image_data = [preped_image]
+
+predictions = tfserver.predict(image_data)
+results = tfserver.process_classification_prediction(predictions, max_classes=10)
+
+print(results)
+```
