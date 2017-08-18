@@ -150,7 +150,7 @@ def distorted_bounding_box_crop(image,
 
     # Crop the image to the specified bounding box.
     cropped_image = tf.slice(image, bbox_begin, bbox_size)
-    return cropped_image, distort_bbox
+    return tf.tuple([cropped_image, distort_bbox])
 
 def _largest_size_at_most(height, width, largest_side):
   """Computes new shape with the largest side equal to `largest_side`.
@@ -244,11 +244,11 @@ class DistortedInputs():
         if cfg.DO_CENTRAL_CROP > 0:
             r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
             do_crop = tf.less(r, cfg.DO_CENTRAL_CROP)
-            distorted_image = tf.cond(do_crop, 
+            distorted_image = tf.cond(do_crop,
                 lambda: tf.image.central_crop(distorted_image, cfg.CENTRAL_CROP_FRACTION),
                 lambda: tf.identity(distorted_image)
             )
-        
+
         distorted_image.set_shape([None, None, 3])
 
         # Add a summary
@@ -330,7 +330,7 @@ def expand_bboxes(xmin, xmax, ymin, ymax, cfg):
     ymin = tf.clip_by_value(ymin - half_h, 0, 1)
     ymax = tf.clip_by_value(ymax + half_h, 0, 1)
 
-    return xmin, xmax, ymin, ymax
+    return tf.tuple([xmin, xmax, ymin, ymax])
 
 def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, fetch_text_labels=True):
     """
