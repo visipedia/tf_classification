@@ -6,7 +6,7 @@ Checkout the [Wiki](https://github.com/visipedia/tf_classification/wiki) for mor
 ---
 
 ## Requirements
-TensorFlow 1.0 is required. The code is tested with Python 2.7 on Ubuntu 14.04 and Mac OSX 10.11. Check out the [requirements.txt](requirements.txt) file for a list of python dependencies. 
+TensorFlow 1.0+ is required. The code is tested with TensorFlow 1.3 and Python 2.7 on Ubuntu 16.04 and Mac OSX 10.11. Check out the [requirements.txt](requirements.txt) file for a list of python dependencies. 
 
 ---
 
