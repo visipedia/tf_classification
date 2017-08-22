@@ -1,5 +1,5 @@
 # TensorFlow Classification
-This repo contains training, testing and classifcation code for image classification using [TensorFlow](https://www.tensorflow.org/).
+This repo contains training, testing and classifcation code for image classification using [TensorFlow](https://www.tensorflow.org/). Whole image classification as well as multi instance bounding box classification is supported. 
 
 Checkout the [Wiki](https://github.com/visipedia/tf_classification/wiki) for more detailed tutorials. 
 
