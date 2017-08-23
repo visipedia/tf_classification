@@ -485,15 +485,15 @@ def inception_v3(inputs,
                           stride=1, padding='SAME'):
         aux_logits = end_points['Mixed_6e']
         with tf.variable_scope('AuxLogits'):
+          kernel_size = _kernel_to_1x1_for_specific_input(net)
           aux_logits = slim.avg_pool2d(
-              aux_logits, [5, 5], stride=3, padding='VALID',
+              aux_logits, kernel_size, stride=3, padding='VALID',
               scope='AvgPool_1a_5x5')
           aux_logits = slim.conv2d(aux_logits, depth(128), [1, 1],
                                    scope='Conv2d_1b_1x1')
 
           # Shape of feature map before the final layer.
-          kernel_size = _reduced_kernel_size_for_small_input(
-              aux_logits, [5, 5])
+          kernel_size = _reduced_kernel_size_for_small_input(aux_logits, [5, 5])
           aux_logits = slim.conv2d(
               aux_logits, depth(768), kernel_size,
               weights_initializer=trunc_normal(0.01),
@@ -508,7 +508,8 @@ def inception_v3(inputs,
 
       # Final pooling and prediction
       with tf.variable_scope('Logits'):
-        kernel_size = _reduced_kernel_size_for_small_input(net, [8, 8])
+        #kernel_size = _reduced_kernel_size_for_small_input(net, [8, 8])
+        kernel_size = _kernel_to_1x1_for_specific_input(net)
         net = slim.avg_pool2d(net, kernel_size, padding='VALID',
                               scope='AvgPool_1a_{}x{}'.format(*kernel_size))
         # 1 x 1 x 2048
@@ -555,6 +556,15 @@ def _reduced_kernel_size_for_small_input(input_tensor, kernel_size):
     kernel_size_out = [min(shape[1], kernel_size[0]),
                        min(shape[2], kernel_size[1])]
   return kernel_size_out
+
+def _kernel_to_1x1_for_specific_input(input_tensor):
+  """Return a kernel that will transform the input_tensor into a vector.
+
+  We want any input tensor of shape [B, H, W, C] to be transormed into [B, 1, 1, C].
+  We assume a known input shape.
+  """
+  shape = input_tensor.get_shape().as_list()
+  return [shape[1], shape[2]]
 
 
 inception_v3_arg_scope = inception_utils.inception_arg_scope
