@@ -51,7 +51,7 @@ $ export EXPERIMENT_DIR=/home/ubuntu/tf_experiments/cub
 There are example configuration files in the [config directory](config/). At the very least you'll need a `config_train.yaml` file, and you'll probably want a `config_test.yaml` file. It is convienent to copy the example configuration files into your `experiment` directory. See the configuration [README](config/README.md) for more details.
 
 ### Choose a Network Architecture
-This repo currently supports the Google Inception flavor of networks. See the nets [README](nets/README.md) for more information on the different Inception versions. At the moment, `inception_v3` probably offers the best tradeoff in terms of size and performance. The [README](nets/README.md) also contains links where you can download checkpoint files for the models. In most cases you should start your training from these checkpoint files rather than training from scratch. 
+This repo currently supports the Google Inception, ResNet and MobileNet flavor of networks. See the nets [README](nets/README.md) for more information on the different Inception versions. At the moment, `inception_v3` probably offers the best tradeoff in terms of size and performance, although its always worth experimenting with a few different architectures. The [README](nets/README.md) also contains links where you can download checkpoint files for the models. In most cases you should start your training from these checkpoint files rather than training from scratch. 
 
 You can specify the name of the choosen network in the configuration yaml file. Alternatively you can pass it in as a command-line argument to most of the scripts. 
 
