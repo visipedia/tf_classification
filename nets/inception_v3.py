@@ -485,7 +485,9 @@ def inception_v3(inputs,
                           stride=1, padding='SAME'):
         aux_logits = end_points['Mixed_6e']
         with tf.variable_scope('AuxLogits'):
-          kernel_size = _kernel_to_1x1_for_specific_input(net)
+          # We want to pool the feature map to be 5x5xC
+          # With padding = 0, and stride 3, this means our kernel is H - 12
+          kernel_size = [aux_logits.get_shape().as_list()[1] - 12] * 2
           aux_logits = slim.avg_pool2d(
               aux_logits, kernel_size, stride=3, padding='VALID',
               scope='AvgPool_1a_5x5')
