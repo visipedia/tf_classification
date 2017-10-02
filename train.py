@@ -349,8 +349,8 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         summaries.add(tf.summary.scalar(tensor=lr,
                                         name='learning_rate'))
 
-
-        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, ema.apply(moving_average_variables))
+        if ema != None:
+            tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, ema.apply(moving_average_variables))
 
         trainable_vars = get_trainable_variables(trainable_scopes)
         train_op = slim.learning.create_train_op(total_loss=total_loss,
