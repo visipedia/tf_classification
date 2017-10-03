@@ -329,15 +329,24 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         total_loss = tf.losses.get_total_loss()
         summaries.add(tf.summary.scalar(name='losses/total_loss', tensor=total_loss))
 
-        ema = None
+        
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             moving_average_variables = slim.get_model_variables()
             ema = tf.train.ExponentialMovingAverage(
                 decay=cfg.MOVING_AVERAGE_DECAY,
                 num_updates=global_step
             )
+        elif restore_variables_with_moving_averages or restore_moving_averages:
+            # Perhaps we are finetuning the last layer of a pretrained model? 
+            # So we just need something to load in the moving averages, for use in get_init_function()
+            moving_average_variables = None
+            ema = tf.train.ExponentialMovingAverage(
+                decay=1,
+                num_updates=global_step
+            )
         else:
-            moving_average_variables, variable_averages = None, None
+            moving_average_variables = None
+            ema = None
 
 
         # Calculate the learning rate schedule.
@@ -349,7 +358,8 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         summaries.add(tf.summary.scalar(tensor=lr,
                                         name='learning_rate'))
 
-        if ema != None:
+        # Add the moving average update ops to the graph
+        if ema != None and moving_average_variables != None:
             tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, ema.apply(moving_average_variables))
 
         trainable_vars = get_trainable_variables(trainable_scopes)
