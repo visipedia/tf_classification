@@ -217,12 +217,16 @@ class DistortedInputs():
           image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 
         # Add a summary of the original data
-        if add_summaries and current_index == 0:
+        if add_summaries:
             new_height, new_width = _largest_size_at_most(image_height, image_width, cfg.INPUT_SIZE)
             resized_original_image = tf.image.resize_bilinear(tf.expand_dims(image, 0), [new_height, new_width])
             resized_original_image = tf.squeeze(resized_original_image)
             resized_original_image = tf.image.pad_to_bounding_box(resized_original_image, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
-            image_summaries = image_summaries.write(0, tf.expand_dims(resized_original_image, 0))
+            #image_summaries = image_summaries.write(0, tf.expand_dims(resized_original_image, 0))
+            image_summaries = tf.cond(tf.equal(current_index, 0),
+                lambda: image_summaries.write(0, tf.expand_dims(resized_original_image, 0)),
+                lambda: image_summaries.identity()
+            )
 
         # Extract a distorted bbox
         if cfg.DO_RANDOM_CROP > 0:
@@ -252,13 +256,17 @@ class DistortedInputs():
         distorted_image.set_shape([None, None, 3])
 
         # Add a summary
-        if add_summaries and current_index == 0:
+        if add_summaries:
             image_with_bbox = tf.image.draw_bounding_boxes(tf.expand_dims(image, 0), distorted_bbox)
             new_height, new_width = _largest_size_at_most(image_height, image_width, cfg.INPUT_SIZE)
             resized_image_with_bbox = tf.image.resize_bilinear(image_with_bbox, [new_height, new_width])
             resized_image_with_bbox = tf.squeeze(resized_image_with_bbox)
             resized_image_with_bbox = tf.image.pad_to_bounding_box(resized_image_with_bbox, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
-            image_summaries = image_summaries.write(1, tf.expand_dims(resized_image_with_bbox, 0))
+            #image_summaries = image_summaries.write(1, tf.expand_dims(resized_image_with_bbox, 0))
+            image_summaries = tf.cond(tf.equal(current_index, 0),
+                lambda: image_summaries.write(1, tf.expand_dims(resized_image_with_bbox, 0)),
+                lambda: image_summaries.identity()
+            )
 
         # Resize the distorted image to the correct dimensions for the network
         if cfg.MAINTAIN_ASPECT_RATIO:
@@ -278,8 +286,12 @@ class DistortedInputs():
 
         distorted_image = tf.image.pad_to_bounding_box(distorted_image, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
 
-        if add_summaries and current_index == 0:
-            image_summaries = image_summaries.write(2, tf.expand_dims(distorted_image, 0))
+        if add_summaries:
+            #image_summaries = image_summaries.write(2, tf.expand_dims(distorted_image, 0))
+            image_summaries = tf.cond(tf.equal(current_index, 0),
+                lambda: image_summaries.write(2, tf.expand_dims(distorted_image, 0)),
+                lambda: image_summaries.identity()
+            )
 
         # Randomly flip the image:
         if cfg.DO_RANDOM_FLIP_LEFT_RIGHT > 0:
@@ -302,8 +314,12 @@ class DistortedInputs():
         distorted_image.set_shape([cfg.INPUT_SIZE, cfg.INPUT_SIZE, 3])
 
         # Add a summary
-        if add_summaries and current_index == 0:
-            image_summaries = image_summaries.write(3, tf.expand_dims(distorted_image, 0))
+        if add_summaries:
+            #image_summaries = image_summaries.write(3, tf.expand_dims(distorted_image, 0))
+            image_summaries = tf.cond(tf.equal(current_index, 0),
+                lambda: image_summaries.write(3, tf.expand_dims(distorted_image, 0)),
+                lambda: image_summaries.identity()
+            )
 
         # Add the distorted image to the TensorArray
         distorted_inputs = distorted_inputs.write(current_index, tf.expand_dims(distorted_image, 0))
