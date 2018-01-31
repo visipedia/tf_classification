@@ -222,6 +222,8 @@ class DistortedInputs():
             resized_original_image = tf.image.resize_bilinear(tf.expand_dims(image, 0), [new_height, new_width])
             resized_original_image = tf.squeeze(resized_original_image)
             resized_original_image = tf.image.pad_to_bounding_box(resized_original_image, 0, 0, cfg.INPUT_SIZE, cfg.INPUT_SIZE)
+
+            # If there are multiple boxes for an image, we only want to write to the TensorArray once.
             #image_summaries = image_summaries.write(0, tf.expand_dims(resized_original_image, 0))
             image_summaries = tf.cond(tf.equal(current_index, 0),
                 lambda: image_summaries.write(0, tf.expand_dims(resized_original_image, 0)),
