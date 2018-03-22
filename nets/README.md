@@ -15,3 +15,29 @@ The table below lists relevant information for each model. To use one of these m
 [ResNet V2 101](https://arxiv.org/abs/1603.05027) | resnet_v2_101 | [Code](resnet_v2.py) | [Checkpoint](http://download.tensorflow.org/models/resnet_v2_101_2017_04_14.tar.gz) | 77.0 | 93.7 | 299px | 44,577,896 | 26.77b |
 [ResNet V2 152](https://arxiv.org/abs/1603.05027) | resnet_v2_152 | [Code](resnet_v2.py) | [Checkpoint](http://download.tensorflow.org/models/resnet_v2_152_2017_04_14.tar.gz) | 77.8 | 94.1 | 299px | 60,236,904 | 40.45b |
 [MobileNet-v1](https://arxiv.org/abs/1704.04861) | mobilenet_v1 | [Code](mobilenet_v1.py) | [Checkpoint](http://download.tensorflow.org/models/mobilenet_v1_1.0_224_2017_06_14.tar.gz) | 70.7 | 89.5 | 224px | 4,231,976 | 1.14b |
+
+# Finetuning
+
+When you finetune one of the above models, you'll start the training procedure using something like:
+```
+python train.py \
+--tfrecords $DATASET_DIR/train* \
+--logdir $EXPERIMENT_DIR/logdir \
+--config $EXPERIMENT_DIR/config_train.yaml \
+--pretrained_model $PRETRAINED_MODEL \
+--checkpoint_exclude_scopes <model specific scopes>
+```
+
+The `--checkpoint_exclude_scopes` argument allows you to prevent restoring variables that have different sizes, which are typically your logit variables (which have a different size due to the number of classes in your application being different than the number of classes in ImageNet). The below table provides the proper value for `--checkpoint_exclude_scopes` for each model.
+
+| Model | Name | TF-Slim File | Default Image Size | Exclude Scopes |
+:----:|:----:|:------------:|:----------:|:-------:|:--------:|:--------:|:--------:|:--------:|
+[Inception V1](http://arxiv.org/abs/1409.4842v1) | inception_v1 | [Code](inception_v1.py) | 224px | InceptionV1/Logits |
+[Inception V2](http://arxiv.org/abs/1502.03167) | inception_v2 | [Code](inception_v2.py) | 224px | InceptionV2/Logits |
+[Inception V3](http://arxiv.org/abs/1512.00567) | inception_v3 | [Code](inception_v3.py) | 299px | InceptionV3/Logits InceptionV3/AuxLogits |
+[Inception V4](http://arxiv.org/abs/1602.07261) | inception_v4 | [Code](inception_v4.py) | 299px | InceptionV4/Logits InceptionV4/AuxLogits |
+[Inception-ResNet-v2](http://arxiv.org/abs/1602.07261) | inception_resnet_v2 | [Code](inception_resnet_v2.py) | 299px | InceptionResnetV2/Logits IncetionResnetV2/AuxLogits |
+[ResNet V2 50](https://arxiv.org/abs/1603.05027) | resnet_v2_50 | [Code](resnet_v2.py) | 224px | resnet_v2_50/logits |
+[ResNet V2 101](https://arxiv.org/abs/1603.05027) | resnet_v2_101 | [Code](resnet_v2.py) | 224px | resnet_v2_101/logits |
+[ResNet V2 152](https://arxiv.org/abs/1603.05027) | resnet_v2_152 | [Code](resnet_v2.py) | 224px | resnet_v2_152/logits |
+[MobileNet-v1](https://arxiv.org/abs/1704.04861) | mobilenet_v1 | [Code](mobilenet_v1.py) | 224px | MobilenetV1/Logits |
