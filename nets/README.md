@@ -31,7 +31,7 @@ python train.py \
 The `--checkpoint_exclude_scopes` argument allows you to prevent restoring variables that have different sizes, which are typically your logit variables (which have a different size due to the number of classes in your application being different than the number of classes in ImageNet). The below table provides the proper value for `--checkpoint_exclude_scopes` for each model.
 
 | Model | Name | TF-Slim File | Default Image Size | Exclude Scopes |
-:----:|:----:|:------------:|:----------:|:-------:|:--------:|:--------:|:--------:|:--------:|
+:----:|:----:|:------------:|:----------:|:-------:|
 [Inception V1](http://arxiv.org/abs/1409.4842v1) | inception_v1 | [Code](inception_v1.py) | 224px | InceptionV1/Logits |
 [Inception V2](http://arxiv.org/abs/1502.03167) | inception_v2 | [Code](inception_v2.py) | 224px | InceptionV2/Logits |
 [Inception V3](http://arxiv.org/abs/1512.00567) | inception_v3 | [Code](inception_v3.py) | 299px | InceptionV3/Logits InceptionV3/AuxLogits |
