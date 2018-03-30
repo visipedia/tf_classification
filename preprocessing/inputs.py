@@ -328,6 +328,43 @@ class DistortedInputs():
 
         return [original_image, bboxes, distorted_inputs, image_summaries, current_index + 1]
 
+def check_normalized_box_values(xmin, ymin, xmax, ymax, maximum_normalized_coordinate=1.01, prefix=""):
+    """ Make sure the normalized coordinates are less than 1
+    """
+
+    xmin_maximum = tf.reduce_max(xmin)
+    xmin_assert = tf.Assert(
+        tf.greater_equal(1.01, xmin_maximum),
+        ['%s, maximum xmin coordinate value is larger '
+         'than %f: ' % (prefix, maximum_normalized_coordinate), xmin_maximum])
+    with tf.control_dependencies([xmin_assert]):
+        xmin = tf.identity(xmin)
+
+    ymin_maximum = tf.reduce_max(ymin)
+    ymin_assert = tf.Assert(
+        tf.greater_equal(1.01, ymin_maximum),
+        ['%s, maximum ymin coordinate value is larger '
+        'than %f: ' % (prefix, maximum_normalized_coordinate), ymin_maximum])
+    with tf.control_dependencies([ymin_assert]):
+        ymin = tf.identity(ymin)
+
+    xmax_maximum = tf.reduce_max(xmax)
+    xmax_assert = tf.Assert(
+        tf.greater_equal(1.01, xmax_maximum),
+        ['%s, maximum xmax coordinate value is larger '
+        'than %f: ' % (prefix, maximum_normalized_coordinate), xmax_maximum])
+    with tf.control_dependencies([xmax_assert]):
+        xmax = tf.identity(xmax)
+
+    ymax_maximum = tf.reduce_max(ymax)
+    ymax_assert = tf.Assert(
+        tf.greater_equal(1.01, ymax_maximum),
+        ['%s, maximum ymax coordinate value is larger '
+        'than %f: ' % (prefix, maximum_normalized_coordinate), ymax_maximum])
+    with tf.control_dependencies([ymax_assert]):
+        ymax = tf.identity(ymax)
+
+    return xmin, ymin, xmax, ymax
 
 def expand_bboxes(xmin, xmax, ymin, ymax, cfg):
     """
@@ -387,6 +424,8 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
         xmax = tf.expand_dims(features['xmax'], 0)
         ymax = tf.expand_dims(features['ymax'], 0)
 
+        xmin, ymin, xmax, ymax = check_normalized_box_values(xmin, ymin, xmax, ymax, prefix="From tfrecords ")
+
         if 'DO_EXPANSION' in bbox_cfg and bbox_cfg.DO_EXPANSION > 0:
             r = tf.random_uniform([], minval=0, maxval=1, dtype=tf.float32)
             do_expansion = tf.less(r, bbox_cfg.DO_EXPANSION)
@@ -394,6 +433,8 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
                 lambda: expand_bboxes(xmin, xmax, ymin, ymax, bbox_cfg.EXPANSION_CFG),
                 lambda: tf.tuple([xmin, xmax, ymin, ymax])
             )
+
+            xmin, ymin, xmax, ymax = check_normalized_box_values(xmin, ymin, xmax, ymax, prefix="After expansion ")
 
         # combine the bounding boxes
         bboxes = tf.concat(values=[xmin, ymin, xmax, ymax], axis=0)

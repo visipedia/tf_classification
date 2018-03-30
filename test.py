@@ -78,7 +78,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
 
         # Define the metrics:
         metric_map = {
-            'Accuracy': slim.metrics.streaming_accuracy(labels=labels, predictions=tf.argmax(predictions, 1)),
+            'Accuracy': tf.metrics.accuracy(labels=labels, predictions=tf.argmax(predictions, 1)),#slim.metrics.streaming_accuracy(labels=labels, predictions=tf.argmax(predictions, 1)),
             loss.op.name : slim.metrics.streaming_mean(loss)
         }
         if len(cfg.ACCURACY_AT_K_METRIC) > 0:
@@ -87,7 +87,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
                 if k <= 1 or k > cfg.NUM_CLASSES:
                     continue
                 in_top_k = tf.nn.in_top_k(predictions=predictions, targets=labels, k=k)
-                metric_map['Accuracy_at_%s' % k] = slim.metrics.streaming_accuracy(labels=bool_labels, predictions=in_top_k)
+                metric_map['Accuracy_at_%s' % k] = tf.metrics.accuracy(labels=bool_labels, predictions=in_top_k)#slim.metrics.streaming_accuracy(labels=bool_labels, predictions=in_top_k)
 
         names_to_values, names_to_updates = slim.metrics.aggregate_metric_map(metric_map)
 
