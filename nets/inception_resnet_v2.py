@@ -193,7 +193,12 @@ def inception_resnet_v2(inputs, num_classes=1001, is_training=True,
 
         # Auxillary tower
         with tf.variable_scope('AuxLogits'):
-          aux = slim.avg_pool2d(net, 5, stride=3, padding='VALID',
+          # Originally, kernel_size = 5
+          # However, if we change the input size then we need to change the kernel size
+          # We want to pool the feature map to be 5x5xC
+          # With padding = 0, and stride 3, this means our kernel is H - 12
+          kernel_size = [net.get_shape().as_list()[1] - 12] * 2
+          aux = slim.avg_pool2d(net, kernel_size, stride=3, padding='VALID',
                                 scope='Conv2d_1a_3x3')
           aux = slim.conv2d(aux, 128, 1, scope='Conv2d_1b_1x1')
           aux = slim.conv2d(aux, 768, aux.get_shape()[1:3],
