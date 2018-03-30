@@ -36,7 +36,7 @@ The `--checkpoint_exclude_scopes` argument allows you to prevent restoring varia
 [Inception V2](http://arxiv.org/abs/1502.03167) | inception_v2 | [Code](inception_v2.py) | 224px | InceptionV2/Logits |
 [Inception V3](http://arxiv.org/abs/1512.00567) | inception_v3 | [Code](inception_v3.py) | 299px | InceptionV3/Logits InceptionV3/AuxLogits |
 [Inception V4](http://arxiv.org/abs/1602.07261) | inception_v4 | [Code](inception_v4.py) | 299px | InceptionV4/Logits InceptionV4/AuxLogits |
-[Inception-ResNet-v2](http://arxiv.org/abs/1602.07261) | inception_resnet_v2 | [Code](inception_resnet_v2.py) | 299px | InceptionResnetV2/Logits IncetionResnetV2/AuxLogits |
+[Inception-ResNet-v2](http://arxiv.org/abs/1602.07261) | inception_resnet_v2 | [Code](inception_resnet_v2.py) | 299px | InceptionResnetV2/Logits InceptionResnetV2/AuxLogits |
 [ResNet V2 50](https://arxiv.org/abs/1603.05027) | resnet_v2_50 | [Code](resnet_v2.py) | 224px | resnet_v2_50/logits |
 [ResNet V2 101](https://arxiv.org/abs/1603.05027) | resnet_v2_101 | [Code](resnet_v2.py) | 224px | resnet_v2_101/logits |
 [ResNet V2 152](https://arxiv.org/abs/1603.05027) | resnet_v2_152 | [Code](resnet_v2.py) | 224px | resnet_v2_152/logits |
