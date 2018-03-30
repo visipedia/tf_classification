@@ -288,7 +288,12 @@ def inception_v4(inputs, num_classes=1001, is_training=True,
           with tf.variable_scope('AuxLogits'):
             # 17 x 17 x 1024
             aux_logits = end_points['Mixed_6h']
-            aux_logits = slim.avg_pool2d(aux_logits, [5, 5], stride=3,
+            # Originally, kernel_size = 5
+            # However, if we change the input size then we need to change the kernel size
+            # We want to pool the feature map to be 5x5xC
+            # With padding = 0, and stride 3, this means our kernel is H - 12
+            kernel_size = [net.get_shape().as_list()[1] - 12] * 2
+            aux_logits = slim.avg_pool2d(aux_logits, kernel_size, stride=3,
                                          padding='VALID',
                                          scope='AvgPool_1a_5x5')
             aux_logits = slim.conv2d(aux_logits, 128, [1, 1],
