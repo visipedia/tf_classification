@@ -292,7 +292,7 @@ def inception_v4(inputs, num_classes=1001, is_training=True,
             # However, if we change the input size then we need to change the kernel size
             # We want to pool the feature map to be 5x5xC
             # With padding = 0, and stride 3, this means our kernel is H - 12
-            kernel_size = [net.get_shape().as_list()[1] - 12] * 2
+            kernel_size = [aux_logits.get_shape().as_list()[1] - 12] * 2
             aux_logits = slim.avg_pool2d(aux_logits, kernel_size, stride=3,
                                          padding='VALID',
                                          scope='AvgPool_1a_5x5')
