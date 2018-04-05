@@ -387,7 +387,7 @@ def expand_bboxes(xmin, xmax, ymin, ymax, cfg):
 
     return tf.tuple([xmin, xmax, ymin, ymax])
 
-def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, fetch_text_labels=True):
+def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, fetch_text_labels=True, read_filename=False):
     """
     Return the image, an array of bounding boxes, and an array of ids.
     """
@@ -398,12 +398,16 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
 
         bbox_cfg = cfg.BBOX_CFG
 
-        features_to_extract = [('image/encoded', 'image'),
-                               ('image/object/bbox/xmin', 'xmin'),
+        features_to_extract = [('image/object/bbox/xmin', 'xmin'),
                                ('image/object/bbox/xmax', 'xmax'),
                                ('image/object/bbox/ymin', 'ymin'),
                                ('image/object/bbox/ymax', 'ymax'),
                                ('image/object/bbox/ymax', 'ymax')]
+
+        if read_filename:
+            features_to_extract.append(('image/filename', 'filename'))
+        else:
+            features_to_extract.append(('image/encoded', 'image'))
 
         if fetch_ids:
             features_to_extract.append(('image/object/id', 'id'))
@@ -416,7 +420,12 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
 
         features = decode_serialized_example(serialized_example, features_to_extract)
 
-        image = features['image']
+        if read_filename:
+            image_buffer = tf.read_file(features['filename'])
+            image = tf.image.decode_jpeg(image_buffer, channels=3)
+        else:
+            image = features['image']
+
         feature_dict['image'] = image
 
         xmin = tf.expand_dims(features['xmin'], 0)
@@ -457,7 +466,12 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
 
     elif cfg.REGION_TYPE == 'image':
 
-        features_to_extract = [('image/encoded', 'image')]
+        features_to_extract = []
+
+        if read_filename:
+            features_to_extract.append(('image/filename', 'filename'))
+        else:
+            features_to_extract.append(('image/encoded', 'image'))
 
         if fetch_ids:
             features_to_extract.append(('image/id', 'id'))
@@ -470,7 +484,12 @@ def get_region_data(serialized_example, cfg, fetch_ids=True, fetch_labels=True, 
 
         features = decode_serialized_example(serialized_example, features_to_extract)
 
-        image = features['image']
+        if read_filename:
+            image_buffer = tf.read_file(features['filename'])
+            image = tf.image.decode_jpeg(image_buffer, channels=3)
+        else:
+            image = features['image']
+
         feature_dict['image'] = image
 
         bboxes = tf.constant([[0.0, 0.0, 1.0, 1.0]])
@@ -537,10 +556,10 @@ def get_distorted_inputs(original_image, bboxes, cfg, add_summaries):
 
     return distorted_inputs
 
-def create_training_batch(serialized_example, cfg, add_summaries):
+def create_training_batch(serialized_example, cfg, add_summaries, read_filenames=False):
 
     features = get_region_data(serialized_example, cfg, fetch_ids=False,
-                               fetch_labels=True, fetch_text_labels=False)
+                               fetch_labels=True, fetch_text_labels=False, read_filename=read_filenames)
 
     original_image = features['image']
     bboxes = features['bboxes']
@@ -555,10 +574,10 @@ def create_training_batch(serialized_example, cfg, add_summaries):
     tensors = [distorted_inputs, labels]
     return [names, tensors]
 
-def create_visualization_batch(serialized_example, cfg, add_summaries, fetch_text_labels=False):
+def create_visualization_batch(serialized_example, cfg, add_summaries, fetch_text_labels=False, read_filenames=False):
 
     features = get_region_data(serialized_example, cfg, fetch_ids=True,
-                               fetch_labels=True, fetch_text_labels=fetch_text_labels)
+                               fetch_labels=True, fetch_text_labels=fetch_text_labels, read_filename=read_filenames)
 
     original_image = features['image']
     ids = features['ids']
@@ -598,10 +617,10 @@ def create_visualization_batch(serialized_example, cfg, add_summaries, fetch_tex
 
     return [names, tensors]
 
-def create_classification_batch(serialized_example, cfg, add_summaries):
+def create_classification_batch(serialized_example, cfg, add_summaries, read_filenames=False):
 
     features = get_region_data(serialized_example, cfg, fetch_ids=True,
-                               fetch_labels=False, fetch_text_labels=False)
+                               fetch_labels=False, fetch_text_labels=False, read_filename=read_filenames)
 
     original_image = features['image']
     bboxes = features['bboxes']
@@ -618,7 +637,8 @@ def create_classification_batch(serialized_example, cfg, add_summaries):
 
 def input_nodes(tfrecords, cfg, num_epochs=None, batch_size=32, num_threads=2,
                 shuffle_batch = True, random_seed=1, capacity = 1000, min_after_dequeue = 96,
-                add_summaries=True, input_type='train', fetch_text_labels=False):
+                add_summaries=True, input_type='train', fetch_text_labels=False,
+                read_filenames=False):
     """
     Args:
         tfrecords:
@@ -645,11 +665,11 @@ def input_nodes(tfrecords, cfg, num_epochs=None, batch_size=32, num_threads=2,
         _, serialized_example = reader.read(filename_queue)
 
         if input_type=='train' or input_type=='test':
-            batch_keys, data_to_batch = create_training_batch(serialized_example, cfg, add_summaries)
+            batch_keys, data_to_batch = create_training_batch(serialized_example, cfg, add_summaries, read_filenames)
         elif input_type=='visualize':
-            batch_keys, data_to_batch = create_visualization_batch(serialized_example, cfg, add_summaries, fetch_text_labels)
+            batch_keys, data_to_batch = create_visualization_batch(serialized_example, cfg, add_summaries, fetch_text_labels, read_filenames)
         elif input_type=='classification':
-            batch_keys, data_to_batch = create_classification_batch(serialized_example, cfg, add_summaries)
+            batch_keys, data_to_batch = create_classification_batch(serialized_example, cfg, add_summaries, read_filenames)
         else:
             raise ValueError("Unknown input type: %s. Options are `train`, `test`, " \
                              "`visualize`, and `classification`." % (input_type,))

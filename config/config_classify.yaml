@@ -7,7 +7,12 @@ SESSION_CONFIG : {
   LOG_DEVICE_PLACEMENT : false,
 
   # How much GPU memory we are allowed to pre-allocate
-  PER_PROCESS_GPU_MEMORY_FRACTION : 0.9
+  PER_PROCESS_GPU_MEMORY_FRACTION : 0.9,
+
+  # Set the number of accessible cpu threads. Leave as null to use everything.
+  # Set to 1 to help with debugging (makes the print statements legible)
+  INTRA_OP_PARALLELISM_THREADS : null,
+  INTER_OP_PARALLELISM_THREADS : null
 }
 
 #################################################
@@ -20,7 +25,7 @@ MODEL_NAME : 'inception_v3'
 
 # END: Dataset Info
 #################################################
-# Image Processing and Augmentation 
+# Image Processing and Augmentation
 # There are 5 steps to image processing:
 # 1) Extract regions from the image
 # 2) Extract a crops from each region
@@ -64,7 +69,7 @@ IMAGE_PROCESSING : {
     DO_CENTRAL_CROP : 0, # Fraction of the time to take a central crop, 0 is never, 1 is always
     CENTRAL_CROP_FRACTION : 0.875, # Between 0 and 1, fraction of size to crop
 
-    # 3) We need to resize the extracted regions to feed into the network. 
+    # 3) We need to resize the extracted regions to feed into the network.
     MAINTAIN_ASPECT_RATIO : false,
     # Avoid slower resize operations (bi-cubic, etc.)
     RESIZE_FAST : true,
@@ -75,7 +80,7 @@ IMAGE_PROCESSING : {
 
     # 5) We can distort the colors of the regions
     # The fraction of time to distort the color, 0 is never, 1 is always
-    DO_COLOR_DISTORTION : 0, 
+    DO_COLOR_DISTORTION : 0,
     # Avoids slower ops (random_hue and random_contrast)
     COLOR_DISTORT_FAST : false
 }
@@ -86,7 +91,7 @@ IMAGE_PROCESSING : {
 #
 # Number of threads to populate the batch queue
 NUM_INPUT_THREADS : 2
-# Should the data be shuffled? 
+# Should the data be shuffled?
 SHUFFLE_QUEUE : false
 # Capacity of the queue producing batched examples
 QUEUE_CAPACITY : 1000
@@ -95,7 +100,7 @@ QUEUE_MIN :  200
 
 # END: Queues
 #################################################
-# Regularization 
+# Regularization
 #
 # The decay to use for the moving average. If 0, then moving average is not computed
 # When restoring models, this value is needed to determine whether to restore moving

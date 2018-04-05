@@ -7,7 +7,12 @@ SESSION_CONFIG : {
   LOG_DEVICE_PLACEMENT : false,
 
   # How much GPU memory we are allowed to pre-allocate
-  PER_PROCESS_GPU_MEMORY_FRACTION : 0.9
+  PER_PROCESS_GPU_MEMORY_FRACTION : 0.9,
+
+  # Set the number of accessible cpu threads. Leave as null to use everything.
+  # Set to 1 to help with debugging (makes the print statements legible)
+  INTRA_OP_PARALLELISM_THREADS : null,
+  INTER_OP_PARALLELISM_THREADS : null
 }
 
 #################################################
@@ -20,7 +25,7 @@ MODEL_NAME : 'inception_v3'
 
 # END: Dataset Info
 #################################################
-# Image Processing and Augmentation 
+# Image Processing and Augmentation
 
 IMAGE_PROCESSING : {
     # Images are assumed to be raveled, and have length  INPUT_SIZE * INPUT_SIZE * 3
@@ -29,7 +34,7 @@ IMAGE_PROCESSING : {
 
 # END: Image Processing and Augmentation
 #################################################
-# Regularization 
+# Regularization
 #
 # The decay to use for the moving average. If 0, then moving average is not computed
 # When restoring models, this value is needed to determine whether to restore moving

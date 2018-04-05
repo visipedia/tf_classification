@@ -13,7 +13,7 @@ from config.parse_config import parse_config_file
 from nets import nets_factory
 from preprocessing import inputs
 
-def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_secs, cfg):
+def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_secs, cfg, read_images=False):
     """
     Args:
         tfrecords (list)
@@ -42,7 +42,8 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
                 capacity=cfg.QUEUE_CAPACITY,
                 min_after_dequeue=cfg.QUEUE_MIN,
                 add_summaries=False,
-                input_type='test'
+                input_type='test',
+                read_filenames=read_images
             )
 
             batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
@@ -74,7 +75,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
         else:
             variables_to_restore = slim.get_variables_to_restore()
             variables_to_restore.append(global_step)
-        
+
 
         # Define the metrics:
         metric_map = {
@@ -100,7 +101,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
                 op=tf.Print(op, [global_step], "Model Step ")
                 print_global_step = False
             op = tf.Print(op, [value], summary_name)
-            tf.add_to_collection(tf.GraphKeys.SUMMARIES, op) 
+            tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
 
         if max_iterations > 0:
             num_batches = max_iterations
@@ -115,7 +116,9 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             allow_soft_placement = True,
             gpu_options = tf.GPUOptions(
                 per_process_gpu_memory_fraction=cfg.SESSION_CONFIG.PER_PROCESS_GPU_MEMORY_FRACTION
-            )
+            ),
+            intra_op_parallelism_threads=cfg.SESSION_CONFIG.INTRA_OP_PARALLELISM_THREADS if 'INTRA_OP_PARALLELISM_THREADS' in cfg.SESSION_CONFIG else None,
+            inter_op_parallelism_threads=cfg.SESSION_CONFIG.INTER_OP_PARALLELISM_THREADS if 'INTER_OP_PARALLELISM_THREADS' in cfg.SESSION_CONFIG else None
         )
 
         if eval_interval_secs > 0:
@@ -201,6 +204,10 @@ def parse_args():
                         help='The name of the architecture to use.',
                         required=False, type=str, default=None)
 
+    parser.add_argument('--read_images', dest='read_images',
+                        help='Read the images from the file system using the `filename` field rather than using the `encoded` field of the tfrecord.',
+                        action='store_true', default=False)
+
     args = parser.parse_args()
     return args
 
@@ -222,7 +229,8 @@ def main():
         save_dir=args.savedir,
         max_iterations=args.batches,
         eval_interval_secs=args.eval_interval_secs,
-        cfg=cfg
+        cfg=cfg,
+        read_images=args.read_images
     )
 
 if __name__ == '__main__':

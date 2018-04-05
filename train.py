@@ -248,7 +248,7 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes, 
         ignore_missing_vars=False)
 
 
-def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=None, checkpoint_exclude_scopes=None, restore_variables_with_moving_averages=False, restore_moving_averages=False):
+def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=None, checkpoint_exclude_scopes=None, restore_variables_with_moving_averages=False, restore_moving_averages=False, read_images=False):
     """
     Args:
         tfrecords (list)
@@ -279,7 +279,8 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
                 capacity=cfg.QUEUE_CAPACITY,
                 min_after_dequeue=cfg.QUEUE_MIN,
                 add_summaries=True,
-                input_type='train'
+                input_type='train',
+                read_filenames=read_images
             )
 
             batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
@@ -329,7 +330,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         total_loss = tf.losses.get_total_loss()
         summaries.add(tf.summary.scalar(name='losses/total_loss', tensor=total_loss))
 
-        
+
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             moving_average_variables = slim.get_model_variables()
             ema = tf.train.ExponentialMovingAverage(
@@ -337,7 +338,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
                 num_updates=global_step
             )
         elif restore_variables_with_moving_averages or restore_moving_averages:
-            # Perhaps we are finetuning the last layer of a pretrained model? 
+            # Perhaps we are finetuning the last layer of a pretrained model?
             # So we just need something to load in the moving averages, for use in get_init_function()
             moving_average_variables = None
             ema = tf.train.ExponentialMovingAverage(
@@ -378,7 +379,9 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
           allow_soft_placement = True,
           gpu_options = tf.GPUOptions(
               per_process_gpu_memory_fraction=cfg.SESSION_CONFIG.PER_PROCESS_GPU_MEMORY_FRACTION
-          )
+          ),
+          intra_op_parallelism_threads=cfg.SESSION_CONFIG.INTRA_OP_PARALLELISM_THREADS if 'INTRA_OP_PARALLELISM_THREADS' in cfg.SESSION_CONFIG else None,
+          inter_op_parallelism_threads=cfg.SESSION_CONFIG.INTER_OP_PARALLELISM_THREADS if 'INTER_OP_PARALLELISM_THREADS' in cfg.SESSION_CONFIG else None
         )
 
         saver = tf.train.Saver(
@@ -457,6 +460,10 @@ def parse_args():
                         help='If True, then we restore the variable that tracks the moving average of each trainable varibale.',
                         required=False, action='store_true', default=False)
 
+    parser.add_argument('--read_images', dest='read_images',
+                        help='Read the images from the file system using the `filename` field rather than using the `encoded` field of the tfrecord.',
+                        action='store_true', default=False)
+
     args = parser.parse_args()
     return args
 
@@ -489,7 +496,8 @@ def main():
         trainable_scopes = args.trainable_scopes,
         checkpoint_exclude_scopes = args.checkpoint_exclude_scopes,
         restore_variables_with_moving_averages=args.restore_variables_with_moving_averages,
-        restore_moving_averages=args.restore_moving_averages
+        restore_moving_averages=args.restore_moving_averages,
+        read_images=args.read_images
     )
 
 if __name__ == '__main__':

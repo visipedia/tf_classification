@@ -11,7 +11,7 @@ import tensorflow as tf
 from config.parse_config import parse_config_file
 from preprocessing.inputs import input_nodes
 
-def visualize_train_inputs(tfrecords, cfg, show_text_labels=False):
+def visualize_train_inputs(tfrecords, cfg, show_text_labels=False, read_images=False):
 
     graph = tf.Graph()
     sess = tf.Session(graph = graph)
@@ -33,7 +33,8 @@ def visualize_train_inputs(tfrecords, cfg, show_text_labels=False):
                 min_after_dequeue=cfg.QUEUE_MIN,
                 add_summaries=False,
                 input_type='visualize',
-                fetch_text_labels=show_text_labels
+                fetch_text_labels=show_text_labels,
+                read_filenames=read_images
             )
 
         # Convert float images to uint8 images
@@ -124,6 +125,10 @@ def parse_args():
                         help='If text labels have been stored in the tfrecords, then you can use this flag to show them.',
                         action='store_true', default=False)
 
+    parser.add_argument('--read_images', dest='read_images',
+                        help='Read the images from the file system using the `filename` field rather than using the `encoded` field of the tfrecord.',
+                        action='store_true', default=False)
+
     args = parser.parse_args()
     return args
 
@@ -133,7 +138,8 @@ def main():
   visualize_train_inputs(
     tfrecords=args.tfrecords,
     cfg=cfg,
-    show_text_labels=args.show_text_labels
+    show_text_labels=args.show_text_labels,
+    read_images=args.read_images
   )
 
 
