@@ -1,5 +1,5 @@
 """
-Extract features. 
+Extract features.
 """
 
 from __future__ import absolute_import
@@ -18,7 +18,7 @@ from config.parse_config import parse_config_file
 from nets import nets_factory
 from preprocessing import inputs
 
-def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, cfg):
+def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, cfg, read_images=False):
     """
     Extract and return the features
     """
@@ -43,7 +43,8 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
                 capacity=cfg.QUEUE_CAPACITY,
                 min_after_dequeue=cfg.QUEUE_MIN,
                 add_summaries=False,
-                input_type='classification'
+                input_type='classification',
+                read_filenames=read_images
             )
 
         arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME]()
@@ -66,13 +67,13 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
         else:
             variables_to_restore = slim.get_variables_to_restore()
             variables_to_restore.append(global_step)
-        
+
 
         saver = tf.train.Saver(variables_to_restore, reshape=True)
 
         num_batches = num_iterations
         num_items = num_batches * cfg.BATCH_SIZE
-        
+
         fetches = []
         feature_stores = []
         for feature_key in feature_keys:
@@ -80,7 +81,7 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
             num_elements = feature.get_shape().as_list()[1]
             feature_stores.append(np.empty([num_items, num_elements], dtype=np.float32))
             fetches.append(feature)
-        
+
         fetches.append(batch_dict['ids'])
         feature_stores.append(np.empty(num_items, dtype=np.object))
 
@@ -126,11 +127,11 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
 
                     t = time.time()
                     outputs = sess.run(fetches)
-                    dt = time.time()-t 
+                    dt = time.time()-t
 
                     idx1 = cfg.BATCH_SIZE * step
                     idx2 = idx1 + cfg.BATCH_SIZE
-                    
+
                     for i in range(len(outputs)):
                         feature_stores[i][idx1:idx2] = outputs[i]
 
@@ -145,7 +146,7 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
 
         coord.request_stop()
         coord.join(threads)
-        
+
         feature_dict = {feature_key : feature for feature_key, feature in zip(feature_keys, feature_stores[:-1])}
         feature_dict['ids'] = feature_stores[-1]
 
@@ -204,6 +205,10 @@ def parse_args():
                         help='The name of the architecture to use.',
                         required=False, type=str, default=None)
 
+    parser.add_argument('--read_images', dest='read_images',
+                        help='Read the images from the file system using the `filename` field rather than using the `encoded` field of the tfrecord.',
+                        action='store_true', default=False)
+
 
 
     args = parser.parse_args()
@@ -226,7 +231,8 @@ def main():
         save_path = args.save_path,
         num_iterations=args.batches,
         feature_keys=args.features,
-        cfg=cfg
+        cfg=cfg,
+        read_images=args.read_images
     )
 
 if __name__ == '__main__':

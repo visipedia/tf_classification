@@ -322,7 +322,8 @@ def mobilenet_v1(inputs,
                                           depth_multiplier=depth_multiplier,
                                           conv_defs=conv_defs)
       with tf.variable_scope('Logits'):
-        kernel_size = _reduced_kernel_size_for_small_input(net, [7, 7])
+        #kernel_size = _reduced_kernel_size_for_small_input(net, [7, 7])
+        kernel_size = net.get_shape()[1:3]
         net = slim.avg_pool2d(net, kernel_size, padding='VALID',
                               scope='AvgPool_1a')
         end_points['AvgPool_1a'] = net
