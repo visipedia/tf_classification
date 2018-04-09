@@ -152,7 +152,7 @@ def extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, c
 
         return feature_dict
 
-def extract_and_save(tfrecords, checkpoint_path, save_path, num_iterations, feature_keys, cfg):
+def extract_and_save(tfrecords, checkpoint_path, save_path, num_iterations, feature_keys, cfg, read_images=False):
     """Extract and save the features
     Args:
         tfrecords (list)
@@ -163,7 +163,7 @@ def extract_and_save(tfrecords, checkpoint_path, save_path, num_iterations, feat
         cfg (EasyDict)
     """
 
-    feature_dict = extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, cfg)
+    feature_dict = extract_features(tfrecords, checkpoint_path, num_iterations, feature_keys, cfg, read_images=read_images)
 
     # save the results
     np.savez(save_path, **feature_dict)
