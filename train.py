@@ -29,7 +29,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 from config.parse_config import parse_config_file
-import deploy
+import deploy as model_deploy
 from nets import nets_factory
 from preprocessing.inputs import input_nodes
 
