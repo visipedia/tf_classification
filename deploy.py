@@ -494,7 +494,7 @@ class DeploymentConfig(object):
         Returns:
           A device string or None if the variables do not need to be cached.
         """
-            return None
+        return None
 
     def clone_device(self, clone_index):
         """Device used to create the clone and all the ops inside the clone.
