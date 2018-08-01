@@ -29,11 +29,12 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 from config.parse_config import parse_config_file
+import deploy
 from nets import nets_factory
 from preprocessing.inputs import input_nodes
 
 
-def _configure_learning_rate(global_step, cfg):
+def _configure_learning_rate(global_step, cfg, num_gpus):
     """Configures the learning rate.
     Args:
         num_samples_per_epoch: The number of samples in each epoch of training.
@@ -44,24 +45,28 @@ def _configure_learning_rate(global_step, cfg):
         ValueError: if cfg.LEARNING_RATE_DECAY_TYPE is not recognized.
     """
 
+    steps_per_epoch = int(cfg.NUM_TRAIN_EXAMPLES / ( cfg.BATCH_SIZE * num_gpus))
+    steps_per_decay = steps_per_epoch * cfg.NUM_EPOCHS_PER_DELAY
 
-    decay_steps = int(cfg.NUM_TRAIN_EXAMPLES / cfg.BATCH_SIZE * cfg.NUM_EPOCHS_PER_DELAY)
+    # Scale the intial learning rate by the number of gpus
+    lr = cfg.INITIAL_LEARNING_RATE * num_gpus
 
     if cfg.LEARNING_RATE_DECAY_TYPE == 'exponential':
-        return tf.train.exponential_decay(cfg.INITIAL_LEARNING_RATE,
+        return tf.train.exponential_decay(lr,
                                           global_step,
-                                          decay_steps,
+                                          steps_per_decay,
                                           cfg.LEARNING_RATE_DECAY_FACTOR,
                                           staircase=cfg.LEARNING_RATE_STAIRCASE,
                                           name='exponential_decay_learning_rate')
 
     elif cfg.LEARNING_RATE_DECAY_TYPE == 'fixed':
-        return tf.constant(cfg.INITIAL_LEARNING_RATE, name='fixed_learning_rate')
+        return tf.constant(lr, name='fixed_learning_rate')
 
     elif cfg.LEARNING_RATE_DECAY_TYPE == 'polynomial':
-        return tf.train.polynomial_decay(cfg.INITIAL_LEARNING_RATE,
+        # Multiply the end learning rate by the number of gpus?
+        return tf.train.polynomial_decay(lr,
                                          global_step,
-                                         decay_steps,
+                                         steps_per_decay,
                                          cfg.END_LEARNING_RATE,
                                          power=1.0,
                                          cycle=False,
@@ -248,7 +253,7 @@ def get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes, 
         ignore_missing_vars=False)
 
 
-def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=None, checkpoint_exclude_scopes=None, restore_variables_with_moving_averages=False, restore_moving_averages=False, read_images=False):
+def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=None, checkpoint_exclude_scopes=None, restore_variables_with_moving_averages=False, restore_moving_averages=False, read_images=False, num_gpus=1):
     """
     Args:
         tfrecords (list)
@@ -264,10 +269,16 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
     # Force all Variables to reside on the CPU.
     with graph.as_default():
 
-        # Create a variable to count the number of train() calls.
-        global_step = slim.get_or_create_global_step()
+        deploy_config = model_deploy.DeploymentConfig(
+            num_clones=num_gpus,
+            clone_on_cpu=False
+        )
 
-        with tf.device('/cpu:0'):
+        # Create a variable to count the number of train() calls.
+        with tf.device(deploy_config.variables_device()):
+            global_step = slim.get_or_create_global_step()
+
+        with tf.device(deploy_config.inputs_device()):
             batch_dict = input_nodes(
                 tfrecords=tfrecords,
                 cfg=cfg.IMAGE_PROCESSING,
@@ -286,51 +297,57 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
             batched_one_hot_labels = slim.one_hot_encoding(batch_dict['labels'],
                                                         num_classes=cfg.NUM_CLASSES)
 
-        # GVH: Doesn't seem to help to the poor queueing performance...
-        # batch_queue = slim.prefetch_queue.prefetch_queue(
-        #                   [batch_dict['inputs'], batched_one_hot_labels], capacity=2)
-        # inputs, labels = batch_queue.dequeue()
+            batch_queue = slim.prefetch_queue.prefetch_queue(
+                            [batch_dict['inputs'], batched_one_hot_labels], capacity=2 * deploy_config.num_clones)
 
-        arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME](
-            weight_decay=cfg.WEIGHT_DECAY,
-            batch_norm_decay=cfg.BATCHNORM_MOVING_AVERAGE_DECAY,
-            batch_norm_epsilon=cfg.BATCHNORM_EPSILON
-        )
+        def model_clone_fn(batch_queue):
 
-        with slim.arg_scope(arg_scope):
-            logits, end_points = nets_factory.networks_map[cfg.MODEL_NAME](
-                inputs=batch_dict['inputs'],
-                num_classes=cfg.NUM_CLASSES,
-                dropout_keep_prob=cfg.DROPOUT_KEEP_PROB,
-                is_training=True
+            images, labels = batch_queue.dequeue()
+
+            arg_scope = nets_factory.arg_scopes_map[cfg.MODEL_NAME](
+                weight_decay=cfg.WEIGHT_DECAY,
+                batch_norm_decay=cfg.BATCHNORM_MOVING_AVERAGE_DECAY,
+                batch_norm_epsilon=cfg.BATCHNORM_EPSILON
             )
 
-            # Add the losses
-            if 'AuxLogits' in end_points:
+            with slim.arg_scope(arg_scope):
+                logits, end_points = nets_factory.networks_map[cfg.MODEL_NAME](
+                    inputs=images,
+                    num_classes=cfg.NUM_CLASSES,
+                    dropout_keep_prob=cfg.DROPOUT_KEEP_PROB,
+                    is_training=True
+                )
+
+                # Add the losses
+                if 'AuxLogits' in end_points:
+                    tf.losses.softmax_cross_entropy(
+                        logits=end_points['AuxLogits'], onehot_labels=labels,
+                        label_smoothing=cfg.LABEL_SMOOTHING, weights=0.4, scope='aux_loss')
+
                 tf.losses.softmax_cross_entropy(
-                    logits=end_points['AuxLogits'], onehot_labels=batched_one_hot_labels,
-                    label_smoothing=cfg.LABEL_SMOOTHING, weights=0.4, scope='aux_loss')
+                    logits=logits, onehot_labels=labels, label_smoothing=cfg.LABEL_SMOOTHING, weights=1.0)
 
-            tf.losses.softmax_cross_entropy(
-                logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=cfg.LABEL_SMOOTHING, weights=1.0)
-
-
+            return end_points
 
         summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+
+        # Create the clones on different GPUs
+        clones = model_deploy.create_clones(
+            config=deploy_config,
+            model_fn=model_clone_fn,
+            args=[batch_queue],
+            kwargs=None
+        )
+        first_clone_scope = deploy_config.clone_scope(0)
+        # Gather update_ops from the first clone. These contain, for example,
+        # the updates for the batch_norm variables created by network_fn.
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, first_clone_scope)
 
         # Summarize the losses
         for loss in tf.get_collection(tf.GraphKeys.LOSSES):
             summaries.add(tf.summary.scalar(name='losses/%s' % loss.op.name, tensor=loss))
 
-        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        if regularization_losses:
-            regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
-            summaries.add(tf.summary.scalar(name='losses/regularization_loss', tensor=regularization_loss))
-
-        total_loss = tf.losses.get_total_loss()
-        summaries.add(tf.summary.scalar(name='losses/total_loss', tensor=total_loss))
-
-
+        # Configure the moving averages
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             moving_average_variables = slim.get_model_variables()
             ema = tf.train.ExponentialMovingAverage(
@@ -349,30 +366,48 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
             moving_average_variables = None
             ema = None
 
+        with tf.device(deploy_config.optimizer_device()):
+            # Calculate the learning rate schedule.
+            lr = _configure_learning_rate(global_step, cfg, num_gpus)
 
-        # Calculate the learning rate schedule.
-        lr = _configure_learning_rate(global_step, cfg)
+            # Create an optimizer that performs gradient descent.
+            optimizer = _configure_optimizer(lr, cfg)
 
-        # Create an optimizer that performs gradient descent.
-        optimizer = _configure_optimizer(lr, cfg)
-
-        summaries.add(tf.summary.scalar(tensor=lr,
-                                        name='learning_rate'))
+            summaries.add(tf.summary.scalar(tensor=lr,
+                                            name='learning_rate'))
 
         # Add the moving average update ops to the graph
         if ema != None and moving_average_variables != None:
-            tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, ema.apply(moving_average_variables))
+            update_ops.append(ema.apply(moving_average_variables))
 
         trainable_vars = get_trainable_variables(trainable_scopes)
-        train_op = slim.learning.create_train_op(total_loss=total_loss,
-                                                 optimizer=optimizer,
-                                                 global_step=global_step,
-                                                 variables_to_train=trainable_vars,
-                                                 clip_gradient_norm=cfg.CLIP_GRADIENT_NORM)
+        total_loss, clones_gradients = model_deploy.optimize_clones(
+            clones=clones,
+            optimizer=optimizer,
+            regularization_losses=None,
+            var_list=trainable_vars
+        )
+        summaries.add(tf.summary.scalar(name='losses/total_loss', tensor=total_loss))
+
+        # Create gradient updates.
+        grad_updates = optimizer.apply_gradients(clones_gradients,
+                                                global_step=global_step)
+        update_ops.append(grad_updates)
+
+        update_op = tf.group(*update_ops)
+        with tf.control_dependencies([update_op]):
+            train_tensor = tf.identity(total_loss, name='train_op')
+
+        # train_op = slim.learning.create_train_op(total_loss=total_loss,
+        #                                          optimizer=optimizer,
+        #                                          global_step=global_step,
+        #                                          variables_to_train=trainable_vars,
+        #                                          clip_gradient_norm=cfg.CLIP_GRADIENT_NORM)
 
         # Merge all of the summaries
-        summaries |= set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+        summaries |= set(tf.get_collection(tf.GraphKeys.SUMMARIES, first_clone_scope))
         summary_op = tf.summary.merge(inputs=list(summaries), name='summary_op')
+
 
         sess_config = tf.ConfigProto(
           log_device_placement=cfg.SESSION_CONFIG.LOG_DEVICE_PLACEMENT,
@@ -392,7 +427,7 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
 
         # Run training.
         slim.learning.train(
-            train_op=train_op,
+            train_op=train_tensor,
             logdir=logdir,
             init_fn=get_init_function(logdir, pretrained_model_path, checkpoint_exclude_scopes, restore_variables_with_moving_averages=restore_variables_with_moving_averages, restore_moving_averages=restore_moving_averages, ema=ema),
             number_of_steps=cfg.NUM_TRAIN_ITERATIONS,
@@ -464,6 +499,10 @@ def parse_args():
                         help='Read the images from the file system using the `filename` field rather than using the `encoded` field of the tfrecord.',
                         action='store_true', default=False)
 
+    parser.add_argument('--num_gpus', dest='num_gpus',
+                        help='The number of gpus available for use. Each GPU will be given `--batch_size` images.',
+                        required=False, type=int, default=1)
+
     args = parser.parse_args()
     return args
 
@@ -497,7 +536,8 @@ def main():
         checkpoint_exclude_scopes = args.checkpoint_exclude_scopes,
         restore_variables_with_moving_averages=args.restore_variables_with_moving_averages,
         restore_moving_averages=args.restore_moving_averages,
-        read_images=args.read_images
+        read_images=args.read_images,
+        num_gpus=args.num_gpus,
     )
 
 if __name__ == '__main__':
