@@ -68,7 +68,7 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
 
             # Add the loss summary
 
-           weights = get_class_weights(cfg, batched_one_hot_labels)
+            weights = get_class_weights(cfg, batched_one_hot_labels)
             loss = tf.losses.softmax_cross_entropy(
                 logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=weights)
 
