@@ -298,12 +298,21 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
         )
 
         with slim.arg_scope(arg_scope):
-            logits, end_points = nets_factory.networks_map[cfg.MODEL_NAME](
+            if cfg.MODEL_NAME == 'resnet_v2_101':
+                logits, end_points = nets_factory.networks_map[cfg.MODEL_NAME](
+                inputs=batch_dict['inputs'],
+                num_classes=cfg.NUM_CLASSES,
+                #dropout_keep_prob=cfg.DROPOUT_KEEP_PROB,
+                is_training=True
+                )
+
+            else:
+                logits, end_points = nets_factory.networks_map[cfg.MODEL_NAME](
                 inputs=batch_dict['inputs'],
                 num_classes=cfg.NUM_CLASSES,
                 dropout_keep_prob=cfg.DROPOUT_KEEP_PROB,
                 is_training=True
-            )
+                )
 
             # Add the losses
             if 'AuxLogits' in end_points:

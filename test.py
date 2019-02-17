@@ -57,8 +57,10 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
                 num_classes=cfg.NUM_CLASSES,
                 is_training=False
             )
-
-            predictions = end_points['Predictions']
+            if 'predictions' in end_points:
+                predictions = end_points['predictions']
+            else:
+                predictions = end_points['Predictions']
             #labels = tf.squeeze(batch_dict['labels'])
             labels = batch_dict['labels']
 
