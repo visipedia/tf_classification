@@ -23,6 +23,7 @@ from __future__ import print_function
 import argparse
 import copy
 import os
+import json
 
 import numpy as np
 import tensorflow as tf
@@ -484,6 +485,10 @@ def parse_args():
                         help='Read the images from the file system using the `filename` field rather than using the `encoded` field of the tfrecord.',
                         action='store_true', default=False)
 
+    parser.add_argument('--class_weight_file', dest='class_weight_file',
+                         help='Pointer to a .json file containing a list of class weights',
+                         required=False, default=None, type=str)
+
     args = parser.parse_args()
     return args
 
@@ -507,6 +512,10 @@ def main():
 
     if args.model_name != None:
         cfg.MODEL_NAME = args.model_name
+
+    if args.class_weight_file != None:
+        with open(args.class_weight_file,'r') as f:
+            cfg.CLASS_WEIGHTS = json.load(f)
 
     train(
         tfrecords=args.tfrecords,
