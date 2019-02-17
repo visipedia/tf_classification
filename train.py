@@ -121,7 +121,7 @@ def _configure_optimizer(learning_rate, cfg):
     return optimizer
 
 def get_class_weights(cfg, batched_one_hot_labels):
-    if cfg.CLASS_WEIGHTS is None:
+    if CLASS_WEIGHTS not in cfg:
         weights = 1.0
     else:
         class_weights = tf.constant(cfg.CLASS_WEIGHTS)
