@@ -119,6 +119,14 @@ def _configure_optimizer(learning_rate, cfg):
         raise ValueError('Optimizer [%s] was not recognized', cfg.OPTIMIZER)
     return optimizer
 
+def get_class_weights(cfg, batched_one_hot_labels):
+    if cfg.CLASS_WEIGHTS is None:
+        weights = 1.0
+    else:
+        class_weights = tf.constant(cfg.CLASS_WEIGHTS)
+        weights = tf.reduce_sum(tf.multiply(batched_one_hot_labels,class_weights),1)
+    return weights
+
 def get_trainable_variables(trainable_scopes):
     """Returns a list of variables to train.
     Returns:
@@ -314,14 +322,17 @@ def train(tfrecords, logdir, cfg, pretrained_model_path=None, trainable_scopes=N
                 is_training=True
                 )
 
+            #calculate class weights
+            weights = get_class_weights(cfg,batched_one_hot_labels)
+
             # Add the losses
             if 'AuxLogits' in end_points:
                 tf.losses.softmax_cross_entropy(
                     logits=end_points['AuxLogits'], onehot_labels=batched_one_hot_labels,
-                    label_smoothing=cfg.LABEL_SMOOTHING, weights=0.4, scope='aux_loss')
+                    label_smoothing=cfg.LABEL_SMOOTHING, weights=0.4*weights, scope='aux_loss')
 
             tf.losses.softmax_cross_entropy(
-                logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=cfg.LABEL_SMOOTHING, weights=1.0)
+                logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=cfg.LABEL_SMOOTHING, weights=weights)
 
 
 

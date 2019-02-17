@@ -12,6 +12,7 @@ import tensorflow.contrib.slim as slim
 from config.parse_config import parse_config_file
 from nets import nets_factory
 from preprocessing import inputs
+from train import get_class_weights
 
 def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_secs, cfg, read_images=False):
     """
@@ -65,8 +66,10 @@ def test(tfrecords, checkpoint_path, save_dir, max_iterations, eval_interval_sec
             labels = batch_dict['labels']
 
             # Add the loss summary
+
+           weights = get_class_weights(cfg, batched_one_hot_labels)
             loss = tf.losses.softmax_cross_entropy(
-                logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=1.0)
+                logits=logits, onehot_labels=batched_one_hot_labels, label_smoothing=0., weights=weights)
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
