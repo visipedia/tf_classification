@@ -368,7 +368,7 @@ def check_normalized_box_values(xmin, ymin, xmax, ymax, maximum_normalized_coord
 
 def expand_bboxes(xmin, xmax, ymin, ymax, cfg):
     """
-    Expand the bboxes.
+    Expand the bboxes. Don't allow to expand past image boundaries.
     """
 
     w = xmax - xmin
