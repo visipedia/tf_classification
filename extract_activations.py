@@ -68,7 +68,7 @@ def visualize_activations(tfrecords, checkpoint_path, save_path, max_iterations,
 
             predicted_labels = tf.argmax(end_points['Predictions'], 1)
             
-            layer_names = ['Conv2d_7b_1x1', 'PreLogitsFlatten']#['Conv2d_4a_3x3','MaxPool_5a_3x3', 'Mixed_5b','Mixed_6a','Mixed_7a','Conv2d_7b_1x1']
+            layer_names = ['PreLogitsFlatten']#['Conv2d_7b_1x1', 'PreLogitsFlatten']#['Conv2d_4a_3x3','MaxPool_5a_3x3', 'Mixed_5b','Mixed_6a','Mixed_7a','Conv2d_7b_1x1']
             print(end_points.keys())
             layers_to_visualize = [end_points[layer] for layer in layer_names]      
 #             MaxPool_5a_3x3 = end_points['MaxPool_5a_3x3']
@@ -178,8 +178,10 @@ def visualize_activations(tfrecords, checkpoint_path, save_path, max_iterations,
         
         # save the results
         if save_logits:
+            print(save_path)
             pickle.dump({'labels':label_array, 'ids':id_array, 'logits':logits_array, 'activations': activations_list,'layer_names':layer_names},open(save_path,'w'))
         else:
+            
             pickle.dump({'labels':label_array, 'ids':id_array, 'activations': activations_list,'layer_names':layer_names},open(save_path,'w'))
 
 
