@@ -56,8 +56,12 @@ def classify(tfrecords, checkpoint_path, save_path, max_iterations, save_logits,
                 num_classes=cfg.NUM_CLASSES,
                 is_training=False
             )
-
-            predicted_labels = tf.argmax(end_points['Predictions'], 1)
+            if 'predictions' in end_points:
+                #predictions = end_points['predictions']
+                predicted_labels = tf.argmax(end_points['predictions'], 1)
+            else:
+                #predictions = end_points['Predictions']
+                predicted_labels = tf.argmax(end_points['Predictions'], 1)
 
         if 'MOVING_AVERAGE_DECAY' in cfg and cfg.MOVING_AVERAGE_DECAY > 0:
             variable_averages = tf.train.ExponentialMovingAverage(
