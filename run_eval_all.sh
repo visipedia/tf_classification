@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EXPERIMENT_DIR="/home/ubuntu/efs/sim_classification/general/resnet_101_v2_train_on_cct"
+EXPERIMENT_DIR="/home/ubuntu/efs/sim_classification/general/train_on_cct_no_deer"
 
 EXP="eval_all"
 
